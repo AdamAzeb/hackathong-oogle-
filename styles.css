@@ -469,6 +469,125 @@ input{
   line-height: 1.5;
   color: var(--text-2);
 }
+.res-stamp.is-no{
+  background: var(--no-bg);
+  border-color: var(--no-line);
+  color: var(--no);
+}
+
+/* ── COUNTER-OFFER (the book refuses — live engine beat) ───── */
+
+.counter{
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: #0f1720cc;
+  opacity: 0;
+  transition: opacity 200ms linear;
+}
+.counter.is-on{ opacity: 1; }
+.counter[hidden]{ display: none; }
+
+.counter-card{
+  width: 100%;
+  max-width: 440px;
+  padding: 18px 20px;
+  background: var(--surface);
+  border: 1px solid var(--chalk-line);
+  border-radius: var(--r-lg);
+}
+.counter-label{
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  color: var(--chalk);
+}
+.counter-reason{
+  margin: 10px 0 0;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: #e9ddc0;
+}
+.counter-terms{
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.counter-asked{
+  color: var(--text-3);
+  text-decoration: line-through;
+}
+.counter-rev{ color: var(--text); }
+.counter-accept{
+  width: 100%;
+  margin-top: 14px;
+  padding: 11px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: var(--chalk);
+  background: var(--chalk-bg);
+  border: 1px solid var(--chalk-line);
+  border-radius: var(--r-md);
+  transition: background 140ms linear, border-color 140ms linear;
+}
+.counter-accept:hover{ background: #f0c14b1f; border-color: #f0c14b55; }
+
+/* ── EVIDENCE BAR (live resolution upload) ─────────────────── */
+
+.evi{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 20px 12px;
+  padding: 10px 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  opacity: 0;
+  transition: opacity 200ms linear;
+}
+.evi.is-on{ opacity: 1; }
+.evi[hidden]{ display: none; }
+
+.evi-label{
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  color: var(--text-2);
+}
+.evi-btn, .evi-skip{
+  padding: 7px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  border-radius: var(--r-sm);
+  transition: background 140ms linear, border-color 140ms linear;
+}
+.evi-btn{
+  margin-left: auto;
+  color: var(--text);
+  background: var(--surface-3);
+  border: 1px solid var(--border-lit);
+}
+.evi-btn:hover{ border-color: var(--text-3); }
+.evi-skip{
+  color: var(--text-3);
+  background: none;
+  border: 1px solid var(--border);
+}
+.evi-skip:hover{ color: var(--text-2); border-color: var(--border-lit); }
 
 /* ── 5. CHART ──────────────────────────────────────────────── */
 

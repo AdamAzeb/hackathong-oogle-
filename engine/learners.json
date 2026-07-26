@@ -1,0 +1,68 @@
+{
+  "max": {
+    "user": "max",
+    "completion": {
+      "by_topic": { "thermodynamics": 0.22, "statics": 0.78, "materials": 0.61 },
+      "by_hour":  { "09": 0.81, "10": 0.78, "15": 0.31, "16": 0.18, "21": 0.24 },
+      "by_size":  { "under_30m": 0.74, "30_60m": 0.48, "over_60m": 0.19 }
+    },
+    "form": [0, 1, 0, 0, 1, 0, 0],
+    "run": 0,
+    "markets": 23,
+    "drift_profile": { "median_idle_min": 11, "recovers_after_nudge": 0.58 },
+    "attempt_log": [
+      { "topic": "thermodynamics", "hour": "16", "size": "over_60m", "attempts": 4, "completions": 0 },
+      { "topic": "thermodynamics", "hour": "10", "size": "under_30m", "attempts": 9, "completions": 7 },
+      { "topic": "statics", "hour": "09", "size": "30_60m", "attempts": 6, "completions": 5 },
+      { "topic": "materials", "hour": "21", "size": "30_60m", "attempts": 4, "completions": 1 }
+    ]
+  },
+  "sara": {
+    "user": "sara",
+    "completion": {
+      "by_topic": { "thermodynamics": 0.84, "statics": 0.79, "materials": 0.81 },
+      "by_hour":  { "09": 0.88, "10": 0.85, "15": 0.74, "21": 0.69 },
+      "by_size":  { "under_30m": 0.9, "30_60m": 0.82, "over_60m": 0.68 }
+    },
+    "form": [1, 1, 1, 0, 1, 1, 1],
+    "run": 3,
+    "markets": 31,
+    "drift_profile": { "median_idle_min": 4, "recovers_after_nudge": 0.85 },
+    "attempt_log": [
+      { "topic": "thermodynamics", "hour": "09", "size": "30_60m", "attempts": 8, "completions": 7 },
+      { "topic": "materials", "hour": "10", "size": "over_60m", "attempts": 5, "completions": 4 }
+    ]
+  },
+  "priya": {
+    "user": "priya",
+    "completion": {
+      "by_topic": { "thermodynamics": 0.7, "statics": 0.72, "materials": 0.77 },
+      "by_hour":  { "09": 0.8, "10": 0.76, "15": 0.66, "21": 0.58 },
+      "by_size":  { "under_30m": 0.82, "30_60m": 0.71, "over_60m": 0.55 }
+    },
+    "form": [1, 0, 1, 1, 0, 1, 1],
+    "run": 2,
+    "markets": 27,
+    "drift_profile": { "median_idle_min": 6, "recovers_after_nudge": 0.72 },
+    "attempt_log": [
+      { "topic": "statics", "hour": "10", "size": "30_60m", "attempts": 7, "completions": 5 },
+      { "topic": "thermodynamics", "hour": "15", "size": "under_30m", "attempts": 6, "completions": 4 }
+    ]
+  },
+  "tom": {
+    "user": "tom",
+    "completion": {
+      "by_topic": { "thermodynamics": 0.4, "statics": 0.52, "materials": 0.44 },
+      "by_hour":  { "09": 0.6, "10": 0.55, "15": 0.38, "21": 0.3 },
+      "by_size":  { "under_30m": 0.62, "30_60m": 0.45, "over_60m": 0.25 }
+    },
+    "form": [0, 1, 1, 0, 0, 1, 0],
+    "run": 0,
+    "markets": 25,
+    "drift_profile": { "median_idle_min": 9, "recovers_after_nudge": 0.5 },
+    "attempt_log": [
+      { "topic": "materials", "hour": "21", "size": "over_60m", "attempts": 5, "completions": 1 },
+      { "topic": "statics", "hour": "09", "size": "under_30m", "attempts": 6, "completions": 4 }
+    ]
+  }
+}

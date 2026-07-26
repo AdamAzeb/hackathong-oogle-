@@ -101,6 +101,14 @@
       <p class="book-body" id="bookBody"></p>
     </div>
 
+    <!-- evidence bar — shown at resolution when the live engine is up -->
+    <div class="evi" id="evi" hidden>
+      <span class="evi-label mono" id="eviLabel"></span>
+      <button class="evi-btn mono" id="eviBtn" type="button"></button>
+      <button class="evi-skip mono" id="eviSkip" type="button"></button>
+      <input id="eviFile" type="file" accept="image/*" hidden>
+    </div>
+
     <!-- resolution verdict, appears below the book on settlement -->
     <div class="res" id="res" hidden>
       <div class="res-top">
@@ -189,7 +197,21 @@
 
 </main>
 
+<!-- counter-offer: the book refuses the doomed commitment. Gemma speaking → chalk. -->
+<div class="counter" id="counter" hidden>
+  <div class="counter-card">
+    <div class="counter-label mono" id="coLabel"></div>
+    <p class="counter-reason" id="coReason"></p>
+    <div class="counter-terms mono">
+      <span class="counter-asked" id="coAsked"></span>
+      <span class="counter-rev" id="coRevised"></span>
+    </div>
+    <button class="counter-accept mono" id="coAccept" type="button"></button>
+  </div>
+</div>
+
 <script src="data.js"></script>
+<script src="api.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

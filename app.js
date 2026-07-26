@@ -141,6 +141,57 @@ function renderChrome(){
   $('resStamp').textContent = DEMO.resolution.verdict;
   $('resConf').textContent = UI.confidenceLabel + ' ' + DEMO.resolution.confidence + '%';
   $('resText').textContent = DEMO.resolution.text;
+
+  $('coLabel').textContent = UI.counterLabel;
+  $('coAccept').textContent = UI.acceptCounter;
+  $('eviLabel').textContent = UI.evidenceLabel;
+  $('eviBtn').textContent = UI.uploadEvidence;
+  $('eviSkip').textContent = UI.skipEvidence;
+}
+
+/* ── live engine beats (BackedAPI, falls back to data.js mocks) ─ */
+
+function commitmentLine(prefix, c){
+  return `${prefix} · ${c.topic} · ${c.minutes} ${UI.minSuffix} · ${c.hour}:00`;
+}
+
+/* The refusal modal. Resolves when Accept is clicked; RESET aborts it. */
+function showCounter(co){
+  $('coReason').textContent = co.reason;
+  $('coAsked').textContent = commitmentLine(UI.askedLabel, DEMO.doomed);
+  $('coRevised').textContent = commitmentLine(UI.counterOfferLabel, co.revised);
+  reveal($('counter'));
+  return step((entry, done) => {
+    $('coAccept').onclick = () => { conceal($('counter')); done(); };
+  });
+}
+
+/* The evidence bar. Resolves with a File, or null on skip; RESET aborts. */
+function awaitEvidence(){
+  $('eviFile').value = '';
+  $('eviLabel').textContent = UI.evidenceLabel;
+  reveal($('evi'));
+  return step((entry, done) => {
+    $('eviBtn').onclick = () => $('eviFile').click();
+    $('eviSkip').onclick = () => done(null);
+    $('eviFile').onchange = e => done(e.target.files[0] || null);
+  });
+}
+
+function fileToB64(file){
+  return new Promise(res => {
+    const r = new FileReader();
+    r.onload = () => res(String(r.result).split(',')[1]);   // strip data: prefix
+    r.onerror = () => res(null);
+    r.readAsDataURL(file);
+  });
+}
+
+function setResolution(r){
+  $('resStamp').textContent = UI.resolvedPrefix + ' ' + r.resolution;
+  $('resStamp').classList.toggle('is-no', r.resolution === 'NO');
+  $('resConf').textContent = UI.confidenceLabel + ' ' + r.confidence + '%';
+  $('resText').textContent = r.text;
 }
 
 /* ── 11. session / margin call / resolution / settlement ───── */
@@ -208,6 +259,9 @@ function flipBoard(box, rows, stat){
 function resetPhase4(){
   hideNow($('mc'));
   hideNow($('res'));
+  hideNow($('counter'));
+  hideNow($('evi'));
+  $('resStamp').classList.remove('is-no');
   renderForm(MARKET.form, false);
   renderBoards();
 }
@@ -504,8 +558,17 @@ async function runDemo(){
   clearTimeline();
   const id = runId;
   $('runBtn').disabled = true;
+  let live = false;                        // engine reachable this run?
 
   try {
+    /* Beat 0 — the refusal. The doomed commitment goes to the live book;
+       Gemma counters, the learner accepts, and THEN the market opens.
+       Canned refusal if the engine is down — the beat always plays. */
+    const co = await BackedAPI.doomedCommitment();
+    if (id !== runId) throw ABORT;
+    live = !co.fallback;
+    if (co.action === 'counter_offer') await showCounter(co);
+
     renderOpening();                       // 0.0s
     await sleep(700);
 
@@ -528,9 +591,14 @@ async function runDemo(){
     await sleep(2100);                     // 6.5s — the session starts
     setState('session');
     setCaption(DEMO.sessionCaption, false);
+    /* prefetch the live nudge during the drift; cached → instant */
+    const mcPromise = BackedAPI.marginCall();
     await drift(DEMO.marginCall.triggersAt);
 
     setState('margin');                    // price hit 24, drift stops
+    const mc = await mcPromise;
+    if (id !== runId) throw ABORT;
+    $('mcText').textContent = mc.text;
     reveal($('mc'));
     await sleep(3000);
 
@@ -540,6 +608,19 @@ async function runDemo(){
     await sleep(800);
 
     setState('resolved');
+    /* Live: pause for the evidence photograph and let Gemma judge it.
+       Engine down (or SKIP): the canned verdict, no pause. */
+    if (live){
+      const file = await awaitEvidence();
+      if (file){
+        $('eviLabel').textContent = UI.resolvingLabel;
+        const b64 = await fileToB64(file);
+        const r = await BackedAPI.resolve(b64);
+        if (id !== runId) throw ABORT;
+        setResolution(r);
+      }
+      conceal($('evi'));
+    }
     reveal($('res'));
     await sleep(1000);
 

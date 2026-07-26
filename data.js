@@ -41,6 +41,15 @@ const SERIES_BASE = [
 
 // HOOK: price_position → Gemma, one call per counterparty
 const DEMO = {
+  // HOOK: counter_offer → Gemma, thinking:high. The doomed commitment the
+  // demo asks for first; reason/revised are the canned fallback if the
+  // engine is down. Live values come from BackedAPI.doomedCommitment().
+  doomed: {
+    topic: "thermodynamics", minutes: 90, hour: "16",
+    reason: "You've failed this exact block four times at four in the afternoon. I'm not opening that market.",
+    revised: { topic: "thermodynamics", minutes: 30, hour: "10" }
+  },
+
   positions: [
     { who:"Priya", side:"no", size:120, price:36, to:51,
       book:"Priya takes No at 36. She's 12-4 on this group." },
@@ -181,6 +190,16 @@ const UI = {
   followThroughHead: "FOLLOW-THROUGH",
   sharpestHead: "SHARPEST",
   confidenceLabel: "CONFIDENCE",
+  counterLabel: "THE BOOK REFUSES",
+  askedLabel: "ASKED",
+  counterOfferLabel: "COUNTER",
+  acceptCounter: "ACCEPT THE COUNTER",
+  minSuffix: "MIN",
+  evidenceLabel: "EVIDENCE",
+  uploadEvidence: "UPLOAD PHOTO",
+  skipEvidence: "SKIP",
+  resolvingLabel: "RESOLVING…",
+  resolvedPrefix: "RESOLVED",
 
   hitGlyph: "✓",
   missGlyph: "✗"
