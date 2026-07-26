@@ -69,6 +69,44 @@ export const DEMO = {
   settledCaption: "Settled · No holders paid at 31¢"
 };
 
+// HOOK: GET /markets — what the category chips browse. The live MARKET above
+// is not repeated here; app.js folds it in at render time so its row always
+// shows the price currently on screen. Chip membership is derived from
+// `status` and `subject` (see COMPONENTS.md §2), and volume / holder count are
+// derived from `positions` — one source of truth per number.
+export const MARKETS = [
+  {
+    id: "mkt_fluids_02", subject: "Priya", initial: "P",
+    question: "Priya submits the fluids lab report",
+    minutes: 60, hour: "14", openingPrice: 66, price: 71,
+    form: [1,0,1,1,0,1,1],
+    status: "open",                 // "open" | "resolved"
+    book: "Opening Priya at 66. …",  // HOOK: open_market → Gemma
+    positions: [ { who:"Sara", side:"yes", size:90, price:68, ago:"3m" } ],
+    comments: [ { who:"Tom", ago:"6m", text:"71 is rich for a lab report …" } ]
+  },
+  {
+    // settled markets add the verdict the resolution card reads
+    id: "mkt_reading_07", subject: "Sara", initial: "S",
+    question: "Sara clears her reading list",
+    minutes: 120, hour: "11", openingPrice: 62, price: 88,
+    form: [1,1,0,1,1,1,1],
+    status: "resolved",
+    verdict: "YES",                 // "YES" | "NO"
+    confidence: 91,
+    resolutionText: "Photograph shows four annotated chapters …",
+    book: "Sixty-two for two hours, which is a long block for anyone. …",
+    positions: [ /* … */ ],
+    comments: [ /* … */ ]
+  }
+  /* … six in data.js */
+];
+
+// Mock depth, quoted around 31¢. app.js reads these prices as OFFSETS from
+// that anchor and re-quotes the ladder around whatever market is on screen
+// (squeezing the offsets if the anchor sits too near 0 or 100 to fit them), so
+// a market at 71 doesn't show a 31¢ book. At anchor 31 the output is these
+// figures exactly.
 export const ORDER_BOOK = {
   bids: [
     { price:31, size:120, total:120 },

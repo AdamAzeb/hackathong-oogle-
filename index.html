@@ -35,6 +35,18 @@
 
 <main class="layout">
 
+  <!-- ── MARKET LIST (a category chip other than Live) ───────── -->
+  <section class="card list" id="list" hidden>
+    <div class="list-head">
+      <div>
+        <div class="sect-head mono" id="listHead"></div>
+        <div class="list-sub" id="listSub"></div>
+      </div>
+      <span class="list-count mono" id="listCount"></span>
+    </div>
+    <div class="list-rows" id="listRows"></div>
+  </section>
+
   <!-- ── MARKET CARD ────────────────────────────────────────── -->
   <section class="card market">
 
@@ -49,6 +61,7 @@
       </div>
 
       <div class="mkt-actions">
+        <button class="btn-reset mono" id="backBtn" type="button" hidden></button>
         <button class="btn-run mono" id="stageBtn" type="button" hidden></button>
         <button class="btn-reset mono" id="newBtn" type="button"></button>
         <button class="btn-run mono" id="runBtn" type="button"></button>

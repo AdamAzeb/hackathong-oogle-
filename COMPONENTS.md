@@ -50,7 +50,27 @@ Height 56px, `--bg` at 88% opacity with `backdrop-filter: blur(12px)`, sticky, 1
 Horizontal row under the nav, 12px vertical padding, scrolls horizontally on mobile.
 Chips: 12px sans, 6px 12px padding, `--r-sm`, `--surface-2`, `--text-2`.
 Active chip: `--surface-3`, `--text`, 1px `--border-lit`.
-From `data.js` → `CHIPS`. First is active.
+From `data.js` → `CHIPS`. First is active. Each chip but `Live` carries its
+market count in mono 10px `--text-3`.
+
+**They switch views.** `Live` is the market card and everything the demo does
+to it. The other four are lists of markets (`data.js` → `MARKETS`, plus the live
+market folded in at render time), and membership is derived, not stored:
+
+| Chip | Contains |
+|---|---|
+| Today | every open market |
+| My markets | every market whose subject is `USER.name` |
+| Group | everyone else's markets |
+| Resolved | every settled market |
+
+A list row opens a **read-only** view of that market in the same card: its own
+price, chart, book line, ladder, activity, holders, comments and — if settled —
+its verdict. ▶ RUN / RESET / ＋ NEW are replaced by `← BACK`, and the trade
+button is disabled: you cannot drive a sequence on a market you're reading.
+
+Leaving `Live` abandons a run in progress and puts that market back to its
+page-load state — a suspended sequence would go on mutating a hidden card.
 
 ## 3. Market header
 

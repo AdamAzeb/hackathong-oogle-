@@ -111,6 +111,112 @@ const DEMO = {
   }
 };
 
+/* ── the rest of the board ──────────────────────────────────────
+   HOOK: GET /markets — everything the category chips browse.
+   The live market above is NOT repeated here: app.js folds it in
+   from MARKET at render time, so its row always shows the price
+   currently on screen. Chip membership is derived, never stored —
+   `Today` is every open market, `My markets` is every market whose
+   subject is USER.name, `Group` is everyone else's, `Resolved` is
+   every settled one. Volume and holder count are derived from
+   `positions` for the same reason: one source of truth per number.
+   ────────────────────────────────────────────────────────────── */
+const MARKETS = [
+  {
+    id: "mkt_fluids_02", subject: "Priya", initial: "P",
+    question: "Priya submits the fluids lab report",
+    minutes: 60, hour: "14", openingPrice: 66, price: 71,
+    form: [1,0,1,1,0,1,1], status: "open",
+    book: "Opening Priya at 66. Eleven of her last fourteen hour-blocks landed, and two in the afternoon is her strongest slot.",
+    positions: [
+      { who:"Sara",  side:"yes", size:90, price:68, ago:"3m" },
+      { who:"Tom",   side:"no",  size:40, price:33, ago:"8m" },
+      { who:"Priya", side:"yes", size:50, price:66, ago:"21m" }
+    ],
+    comments: [
+      { who:"Tom", ago:"6m", text:"71 is rich for a lab report the night before" }
+    ]
+  },
+  {
+    id: "mkt_5k_03", subject: "Tom", initial: "T",
+    question: "Tom runs 5k before 08:00",
+    minutes: 45, hour: "08", openingPrice: 51, price: 44,
+    form: [1,0,0,1,0,0,1], status: "open",
+    book: "Fifty-one, and only because you managed it twice this month. The pattern says the alarm wins.",
+    positions: [
+      { who:"Priya", side:"no",  size:60, price:52, ago:"5m" },
+      { who:"Tom",   side:"yes", size:50, price:51, ago:"18m" }
+    ],
+    comments: [
+      { who:"Sara", ago:"4m", text:"he's told us about this 5k for three weeks" },
+      { who:"Tom",  ago:"2m", text:"the market is wrong and i will prove it" }
+    ]
+  },
+  {
+    id: "mkt_compiler_04", subject: "Sara", initial: "S",
+    question: "Sara finishes the compiler assignment",
+    minutes: 90, hour: "19", openingPrice: 79, price: 83,
+    form: [1,1,1,0,1,1,1], status: "open",
+    book: "Seventy-nine. Six of your last seven, and the evening blocks are where you do your actual work.",
+    positions: [
+      { who:"Sara",  side:"yes", size:50,  price:79, ago:"26m" },
+      { who:"Max",   side:"yes", size:100, price:81, ago:"11m" },
+      { who:"Priya", side:"yes", size:75,  price:82, ago:"6m" }
+    ],
+    comments: [
+      { who:"Max", ago:"9m", text:"free money, she always ships this stuff" }
+    ]
+  },
+  {
+    id: "mkt_lecture_05", subject: "Max", initial: "M",
+    question: "Max attends the 09:00 lecture",
+    minutes: 50, hour: "09", openingPrice: 58, price: 52,
+    form: [1,0,1,0,0,1,0], status: "open",
+    book: "Fifty-eight. Nine in the morning is not your hour, but a lecture only asks you to be in a room.",
+    positions: [
+      { who:"Max",  side:"yes", size:50, price:58, ago:"33m" },
+      { who:"Sara", side:"no",  size:70, price:44, ago:"14m" }
+    ],
+    comments: [
+      { who:"Sara", ago:"12m", text:"i have seen your 9ams. no." }
+    ]
+  },
+  {
+    id: "mkt_linalg_06", subject: "Max", initial: "M",
+    question: "Max finishes the linear algebra sheet",
+    minutes: 45, hour: "21", openingPrice: 47, price: 29,
+    form: [0,1,0,0,1,0,0], status: "resolved",
+    verdict: "NO", confidence: 94,
+    resolutionText: "No submission before resolution. Two problems photographed at the deadline, both unfinished — the commitment was for the sheet. Resolved NO.",
+    book: "Forty-seven at nine in the evening. You've started this sheet twice and finished it neither time.",
+    positions: [
+      { who:"Priya", side:"no",  size:110, price:53, ago:"1h" },
+      { who:"Tom",   side:"no",  size:65,  price:64, ago:"1h" },
+      { who:"Max",   side:"yes", size:50,  price:47, ago:"2h" }
+    ],
+    comments: [
+      { who:"Priya", ago:"1h", text:"9pm linear algebra is a genre of fiction" }
+    ]
+  },
+  {
+    id: "mkt_reading_07", subject: "Sara", initial: "S",
+    question: "Sara clears her reading list",
+    minutes: 120, hour: "11", openingPrice: 62, price: 88,
+    form: [1,1,0,1,1,1,1], status: "resolved",
+    verdict: "YES", confidence: 91,
+    resolutionText: "Photograph shows four annotated chapters with margin notes in the same hand and pen, consistent with a two-hour reading block. Resolved YES.",
+    book: "Sixty-two for two hours, which is a long block for anyone. Your record is what's holding this line up.",
+    positions: [
+      { who:"Sara", side:"yes", size:50,  price:62, ago:"4h" },
+      { who:"Max",  side:"no",  size:80,  price:31, ago:"3h" },
+      { who:"Tom",  side:"yes", size:120, price:74, ago:"3h" }
+    ],
+    comments: [
+      { who:"Max", ago:"2h", text:"took the No and got what i deserved" }
+    ]
+  }
+];
+
 const ORDER_BOOK = {
   bids: [
     { price:31, size:120, total:120 },
@@ -230,6 +336,25 @@ const UI = {
   skipEvidence: "SKIP",
   resolvingLabel: "RESOLVING…",
   resolvedPrefix: "RESOLVED",
+
+  /* category chips — one heading per chip, keyed by the chip's own label */
+  back: "← BACK",
+  listHeads: {
+    "Today":      "RESOLVING TODAY",
+    "My markets": "MARKETS ON ME",
+    "Group":      "YOUR GROUP",
+    "Resolved":   "SETTLED"
+  },
+  listSubs: {
+    "Today":      "Every open market on the board",
+    "My markets": "What the group has priced about you",
+    "Group":      "Markets you can take a position in",
+    "Resolved":   "Judged, paid, and on the record"
+  },
+  listEmpty: "Nothing here yet.",
+  countSuffix: "MARKETS",
+  countSuffix1: "MARKET",
+  settledAtPrefix: "at",
 
   hitGlyph: "✓",
   missGlyph: "✗"

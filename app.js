@@ -48,6 +48,7 @@ function setState(s){
   document.documentElement.dataset.state = s;   // one hook for CSS and debugging
 }
 let price = 31;              // current market probability, 0–100
+let openPrice = MARKET.openingPrice;   // what the delta is measured against
 let series = [];             // chart history, oldest first
 let side = 'yes';            // trade panel selection
 let amount = 20;
@@ -65,7 +66,27 @@ function yOf(p){
   return CHART.H - Math.max(0, Math.min(1, t)) * CHART.H;
 }
 
+/* The scripted market lives in a fixed 12–76 window so its drift always reads
+   at the same slope. A browsed market picks its own window: an 88¢ line would
+   otherwise flatten against the ceiling. setRange(null) restores the default. */
+function setRange(pts){
+  if (!pts){ CHART.MIN = 12; CHART.MAX = 76; return; }
+  const lo = Math.min(...pts), hi = Math.max(...pts);
+  const pad = Math.max(7, (hi - lo) * 0.4);
+  CHART.MIN = Math.max(0, Math.round(lo - pad));
+  CHART.MAX = Math.min(100, Math.round(hi + pad));
+}
+
+/* Safety net, not a feature: live prices can walk anywhere between 3 and 97,
+   and a clipped line reads as a flat one. Only ever widens. */
+function fitRange(pts){
+  const lo = Math.min(...pts), hi = Math.max(...pts);
+  if (lo < CHART.MIN + 4) CHART.MIN = Math.max(0, Math.round(lo) - 8);
+  if (hi > CHART.MAX - 4) CHART.MAX = Math.min(100, Math.round(hi) + 8);
+}
+
 function drawChart(pts){
+  fitRange(pts);
   const n = pts.length;
   const step = CHART.W / (n - 1);
   let poly = '';
@@ -110,10 +131,10 @@ function renderChrome(){
   $('navAvatar').textContent = USER.initial;
   $('navAvatar').setAttribute('aria-label', USER.name);
 
-  $('chips').innerHTML = CHIPS.map((c, i) =>
-    `<button type="button" class="chip${i === 0 ? ' is-active' : ''}">${c}</button>`).join('');
+  renderChips();
 
   $('runBtn').textContent = UI.run;
+  $('backBtn').textContent = UI.back;
   $('resetBtn').textContent = UI.reset;
   $('bookLabel').textContent = UI.bookLabel;
   $('amountLabel').textContent = UI.amountLabel;
@@ -265,6 +286,7 @@ function renderSettlement(positions, yes){
    figures nobody actually changes rank — only Max's own numbers move, so
    what reads on screen is the figures restating, not rows swapping. */
 function settle(){
+  liveResult = { verdict: 'YES', confidence: DEMO.resolution.confidence };
   renderForm(MARKET.form.slice(0, -1).concat(1), true);
   flipBoard('ftRows', DEMO.settled.followThrough, 'rate');
   flipBoard('shRows', DEMO.settled.sharpest, 'record');
@@ -294,6 +316,7 @@ function flipBoard(box, rows, stat){
 
 /* Everything Phase 4 adds to the page, cleared so a re-run starts clean. */
 function resetPhase4(){
+  liveResult = null;
   hideNow($('mc'));
   hideNow($('res'));
   hideNow($('pay'));
@@ -317,9 +340,33 @@ function openTab(i){
   UI.depthTabs.forEach((_, n) => $('panel-' + n).classList.toggle('is-open', n === i));
 }
 
-function renderOrderBook(){
+/* ORDER_BOOK is mock depth quoted around 31¢, so it's read as offsets from
+   that price and re-anchored for whatever market is on screen — a market at
+   71 must not show the scripted market's ladder. Offsets are squeezed, not
+   clamped, when the anchor sits too near 0 or 100 to fit them: clamping
+   stacks two levels on the same price. At anchor 31 this reproduces
+   ORDER_BOOK exactly, digit for digit. */
+const LADDER_ANCHOR = 31;
+
+function ladder(anchor){
+  const legs = (rows, up) => {
+    const span = Math.max(...rows.map(r => Math.abs(r.price - LADDER_ANCHOR)));
+    const room = up ? 99 - anchor : anchor - 1;
+    const k = span ? Math.min(1, room / span) : 1;
+    let total = 0;
+    return rows.map(r => {
+      total += r.size;
+      return { price: anchor + Math.round((r.price - LADDER_ANCHOR) * k),
+               size: r.size, total };
+    });
+  };
+  return { bids: legs(ORDER_BOOK.bids, false), asks: legs(ORDER_BOOK.asks, true) };
+}
+
+function renderOrderBook(anchor = LADDER_ANCHOR){
+  const book = ladder(Math.round(anchor));
   // widest bar is scaled to the deepest level on either side
-  const peak = Math.max(...ORDER_BOOK.bids.concat(ORDER_BOOK.asks).map(r => r.size));
+  const peak = Math.max(...book.bids.concat(book.asks).map(r => r.size));
 
   const col = (rows, kind, head) =>
     `<div class="ob-head ${kind}s">
@@ -335,8 +382,8 @@ function renderOrderBook(){
          <span class="ob-total">${r.total}</span>
        </div>`).join('');
 
-  $('obBids').innerHTML = col(ORDER_BOOK.bids, 'bid', UI.bidsHead);
-  $('obAsks').innerHTML = col(ORDER_BOOK.asks, 'ask', UI.asksHead);
+  $('obBids').innerHTML = col(book.bids, 'bid', UI.bidsHead);
+  $('obAsks').innerHTML = col(book.asks, 'ask', UI.asksHead);
 }
 
 function renderHolders(h = HOLDERS){
@@ -353,8 +400,12 @@ function renderHolders(h = HOLDERS){
   $('holdNo').innerHTML = col(h.no, 'no', UI.noHolders);
 }
 
-function renderComments(){
-  $('comments').innerHTML = COMMENTS.map(c =>
+function renderComments(list = COMMENTS){
+  if (!list.length){
+    $('comments').innerHTML = `<div class="list-empty">${UI.listEmpty}</div>`;
+    return;
+  }
+  $('comments').innerHTML = list.map(c =>
     `<div class="cmt">
        <span class="av">${c.who[0]}</span>
        <div>
@@ -405,17 +456,30 @@ function renderMarket(){
 
 /* flipNewest animates only the rightmost square — the one animation the form
    line is allowed, and only on settlement */
-function renderForm(form, flipNewest){
+function formSquares(form, flipNewest){
   const last = form.length - 1;
+  return form.map((f, i) => {
+    const cls = (f ? 'hit' : 'miss') + (flipNewest && i === last ? ' flip' : '');
+    return `<span class="form-sq ${cls}">${f ? UI.hitGlyph : UI.missGlyph}</span>`;
+  }).join('');
+}
+
+function renderForm(form, flipNewest){
   $('form').innerHTML =
-    `<span class="form-label">${UI.formLabel}</span>` +
-    form.map((f, i) => {
-      const cls = (f ? 'hit' : 'miss') + (flipNewest && i === last ? ' flip' : '');
-      return `<span class="form-sq ${cls}">${f ? UI.hitGlyph : UI.missGlyph}</span>`;
-    }).join('');
+    `<span class="form-label">${UI.formLabel}</span>` + formSquares(form, flipNewest);
 }
 
 /* ── price / trade panel ───────────────────────────────────── */
+
+/* "▲ +7" / "▼ -12" / "— 0" — one direction vocabulary for the price block and
+   the list rows */
+function deltaClass(diff){
+  return diff > 0 ? 'up' : diff < 0 ? 'down' : 'flat';
+}
+
+function deltaText(diff){
+  return diff > 0 ? '▲ +' + diff : diff < 0 ? '▼ ' + diff : '— 0';
+}
 
 function setPrice(v){
   price = Math.max(0, Math.min(100, v));   // a probability, never outside 0–100
@@ -423,10 +487,10 @@ function setPrice(v){
 
   $('priceNum').textContent = shown;
 
-  const diff = shown - MARKET.openingPrice;
+  const diff = shown - openPrice;
   const delta = $('delta');
-  delta.className = 'delta mono ' + (diff > 0 ? 'up' : diff < 0 ? 'down' : 'flat');
-  delta.textContent = diff > 0 ? '▲ +' + diff : diff < 0 ? '▼ ' + diff : '— 0';
+  delta.className = 'delta mono ' + deltaClass(diff);
+  delta.textContent = deltaText(diff);
 
   $('yesPrice').textContent = shown + '¢';
   $('noPrice').textContent = (100 - shown) + '¢';
@@ -491,6 +555,8 @@ function pushFeed(p){
 function renderTraded(){
   setState('idle');
   resetPhase4();
+  setRange(null);
+  openPrice = MARKET.openingPrice;
   series = SERIES_BASE.slice();
   let from = MARKET.openingPrice;
   DEMO.positions.forEach(p => {
@@ -509,6 +575,8 @@ function renderTraded(){
 function renderOpening(){
   setState('idle');
   resetPhase4();
+  setRange(null);
+  openPrice = MARKET.openingPrice;
   series = SERIES_BASE.slice();
   setPrice(MARKET.openingPrice);
   drawChart(series);
@@ -623,14 +691,20 @@ function liveMeta(){
   ].join(d);
 }
 
-function liveHolders(){
+/* Positions → the two holder columns, biggest first. One position per row is
+   what the feed shows; this is the same data added up per person. */
+function holdersFrom(positions){
   const agg = s => {
     const m = new Map();
-    LIVE.positions.filter(p => p.side === s)
+    positions.filter(p => p.side === s)
       .forEach(p => m.set(p.who, (m.get(p.who) || 0) + p.size));
     return [...m].map(([who, size]) => ({ who, size })).sort((a, b) => b.size - a.size);
   };
   return { yes: agg('yes'), no: agg('no') };
+}
+
+function liveHolders(){
+  return holdersFrom(LIVE.positions);
 }
 
 function openCommit(){
@@ -681,12 +755,19 @@ async function priceCommitment(){
   resetPhase4();
   $('question').textContent = liveQuestion(LIVE.commitment);
   series = SERIES_BASE.map((_, i) => co.probability + (i % 2 ? 0.7 : -0.7));
+  openPrice = co.probability;
+  /* Gemma can open anywhere from 5 to 95, so the window is built around the
+     line rather than inherited: the extremes are where the session's drift and
+     the bets can plausibly take it, so the chart doesn't rescale mid-beat. */
+  setRange(series.concat([co.probability - 20, co.probability + 12]));
   setPrice(co.probability);
   drawChart(series);
   setBook(co.rationale);
   setCaption(UI.pricedCaption, false);
   renderFeed([]);
   renderHolders({ yes: [], no: [] });
+  renderOrderBook(co.probability);
+  renderComments([]);
   liveMeta();
   openTab(TAB_ACTIVITY);
   setStage(UI.publish);
@@ -711,6 +792,7 @@ async function placeBet(who, betSide, stake){
   const delta = Math.max(1, Math.round(stake / 20)) * (betSide === 'yes' ? 1 : -1);
   try { await countTo(Math.max(3, Math.min(97, p + delta)), 500); }
   catch (e){ if (e !== ABORT) throw e; }
+  renderOrderBook(price);          // the ladder follows the line it quotes
 }
 
 async function startSessionLive(){
@@ -796,6 +878,7 @@ function resolveLive(r){
    losers forfeit their stake. */
 function settleLive(yes){
   setState('settled');
+  liveResult = { verdict: yes ? 'YES' : 'NO' };
   const deltas = new Map();
   LIVE.positions.forEach(p => {
     const won = (p.side === 'yes') === yes;
@@ -891,6 +974,225 @@ async function runDemo(){
   }
 }
 
+/* ── THE CATEGORY CHIPS ───────────────────────────────────────
+   Live is the market card and everything the demo does to it. Every
+   other chip is a list, and a row in that list opens a read-only
+   view of that market — same card, same tabs, no ▶ RUN, no trading,
+   because you can't drive a sequence on a market you're only reading.
+   Membership is derived from the data (see MARKETS in data.js), so
+   adding a market to the mock puts it in the right lists for free.
+   ────────────────────────────────────────────────────────────── */
+
+const LIVE_CHIP = CHIPS[0];
+
+const CHIP_FILTER = {
+  'Today':      m => m.status === 'open',
+  'My markets': m => m.subject === USER.name,
+  'Group':      m => m.subject !== USER.name,
+  'Resolved':   m => m.status === 'resolved'
+};
+
+let chip = LIVE_CHIP;        // active chip
+let viewing = null;          // the browsed market, or null on the live one
+let liveResult = null;       // the live market's verdict once it has settled
+
+function setView(v){
+  document.documentElement.dataset.view = v;   // 'market' | 'list'
+  $('list').hidden = v !== 'list';             // the card the CSS can't reach
+}
+
+/* The live market as a list row. Every field is read at call time — from LIVE
+   in live mode, from MARKET otherwise — so the row can never disagree with
+   the card it opens. */
+function liveEntry(){
+  const c = LIVE && LIVE.commitment;
+  return {
+    id: MARKET.id,
+    live: true,
+    subject: MARKET.subject,
+    initial: MARKET.initial,
+    question: c ? liveQuestion(c) : MARKET.question,
+    minutes: c ? Number(c.minutes) : parseInt(MARKET.duration, 10),
+    hour: c ? c.hour : MARKET.resolves.match(/\d+/)[0],
+    openingPrice: openPrice,
+    price: Math.round(price),
+    form: MARKET.form,
+    volume: c ? undefined : MARKET.volume,        // undefined → derived below
+    holders: c ? undefined : MARKET.holders,
+    positions: c ? LIVE.positions : ACTIVITY,
+    status: liveResult ? 'resolved' : 'open',
+    verdict: liveResult && liveResult.verdict
+  };
+}
+
+function marketsFor(name){
+  const f = CHIP_FILTER[name];
+  return f ? [liveEntry()].concat(MARKETS).filter(f) : [];
+}
+
+function renderChips(){
+  $('chips').innerHTML = CHIPS.map(name => {
+    const on = name === chip;
+    // the live market isn't a count, it's the market you're on
+    const n = CHIP_FILTER[name] ? `<span class="chip-n">${marketsFor(name).length}</span>` : '';
+    return `<button type="button" class="chip${on ? ' is-active' : ''}"
+              data-chip="${name}" aria-pressed="${on}">${name}${n}</button>`;
+  }).join('');
+}
+
+/* Volume and holders are derived from the positions, so a market can't quote a
+   number its own activity feed contradicts. The live market passes its own
+   figures through — DATA.md authored those to match its card. */
+function marketMeta(m){
+  const vol = m.volume !== undefined ? m.volume
+            : m.positions.reduce((s, p) => s + p.size, 0);
+  const held = m.holders !== undefined ? m.holders
+             : new Set(m.positions.map(p => p.who)).size;
+  return [
+    m.minutes + ' ' + UI.minSuffix,
+    UI.resolvesPrefix + ' ' + String(m.hour).padStart(2, '0') + ':00',
+    money(vol) + ' ' + UI.volSuffix,
+    held + ' ' + UI.holdersSuffix
+  ].join('<span class="dot"></span>');
+}
+
+function marketRow(m){
+  const diff = m.price - m.openingPrice;
+  const num = m.status === 'resolved'
+    ? `<span class="mkt-row-stamp mono${m.verdict === 'NO' ? ' is-no' : ''}">${m.verdict}</span>`
+    : `<span class="mkt-row-price mono">${m.price}%</span>
+       <span class="mkt-row-delta mono ${deltaClass(diff)}">${deltaText(diff)}</span>`;
+
+  return `<button type="button" class="mkt-row" data-id="${m.id}">
+      <span class="thumb mono">${m.initial}</span>
+      <span class="mkt-row-id">
+        <span class="mkt-row-q">${m.question}</span>
+        <span class="meta mono">${marketMeta(m)}</span>
+      </span>
+      <span class="mkt-row-form" aria-hidden="true">${formSquares(m.form, false)}</span>
+      <span class="mkt-row-num">${num}</span>
+    </button>`;
+}
+
+/* A plausible line for a market nobody watched trade: the pre-market texture
+   re-anchored to its opening price, then one leg per position taken, landing
+   on the price it's at now. */
+function seriesFor(m){
+  const anchor = SERIES_BASE[SERIES_BASE.length - 1];
+  let s = SERIES_BASE.map(v => m.openingPrice + (v - anchor));
+  let from = m.openingPrice;
+  m.positions.forEach((p, i) => {
+    const to = m.openingPrice + (m.price - m.openingPrice) * ((i + 1) / m.positions.length);
+    s = s.concat(segment(from, to, SEG));
+    from = to;
+  });
+  return s;
+}
+
+/* Which buttons the market card is allowed. The demo controls belong to the
+   live market only: RESET on a browsed market would reset a market that isn't
+   on screen. */
+function marketButtons(live){
+  $('runBtn').hidden = !live;
+  $('resetBtn').hidden = !live;
+  $('newBtn').hidden = !live;
+  $('backBtn').hidden = live;
+  if (live) $('runBtn').disabled = false;
+  $('action').disabled = !live;
+  if (!live) setStage(null);
+}
+
+function openMarket(m){
+  if (m.live){ showLive(); return; }
+
+  clearTimeline();
+  LIVE = null;
+  viewing = m;
+  setView('market');
+  marketButtons(false);
+  setState(m.status === 'resolved' ? 'settled' : 'idle');
+  resetPhase4();
+
+  $('thumb').textContent = m.initial;
+  $('question').textContent = m.question;
+  $('meta').innerHTML = marketMeta(m);
+  renderForm(m.form, false);
+
+  openPrice = m.openingPrice;
+  series = seriesFor(m);
+  setRange(series);
+  setPrice(m.price);
+  drawChart(series);
+
+  $('bookBody').textContent = m.book;
+  renderFeed(m.positions);
+  renderHolders(holdersFrom(m.positions));
+  renderOrderBook(m.price);
+  renderComments(m.comments || []);
+
+  if (m.status === 'resolved'){
+    setCaption((m.verdict === 'YES' ? UI.settledYesCaption : UI.settledNoCaption) +
+               ' ' + UI.settledAtPrefix + ' ' + m.price + '¢', false);
+    setResolution({ resolution: m.verdict, confidence: m.confidence, text: m.resolutionText });
+    reveal($('res'));
+    openTab(TAB_ACTIVITY);          // a settled market's ladder is history
+  } else {
+    setCaption(UI.openCaption, false);
+    openTab(TAB_BOOK);
+  }
+
+  window.scrollTo({ top: 0, behavior: REDUCED ? 'auto' : 'smooth' });
+}
+
+/* Leaving the live market abandons whatever the demo was doing: a suspended
+   sequence would go on mutating a card nobody can see. So it is put back to
+   its page-load state the moment you leave, not when you return — that way
+   the row in the list and the card it opens can never disagree. */
+function resetLiveMarket(){
+  clearTimeline();
+  LIVE = null;
+  setStage(null);
+  renderMarket();
+  renderOrderBook(DEMO.positions[DEMO.positions.length - 1].to);
+  renderHolders(HOLDERS);
+  renderComments(COMMENTS);
+  renderTraded();
+}
+
+/* Clicking Live while already on it does nothing, which is what a presenter
+   mid-run expects. */
+function showLive(){
+  const here = chip === LIVE_CHIP && !viewing;
+  chip = LIVE_CHIP;
+  viewing = null;
+  renderChips();
+  setView('market');
+  marketButtons(true);
+  if (!here) resetLiveMarket();
+}
+
+function showList(name){
+  resetLiveMarket();
+  chip = name;
+  viewing = null;
+  renderChips();          // after the reset: the live row reads the live card
+  setView('list');
+
+  const rows = marketsFor(name);
+  $('listHead').textContent = UI.listHeads[name] || name;
+  $('listSub').textContent = UI.listSubs[name] || '';
+  $('listCount').textContent =
+    rows.length + ' ' + (rows.length === 1 ? UI.countSuffix1 : UI.countSuffix);
+  $('listRows').innerHTML = rows.length
+    ? rows.map(marketRow).join('')
+    : `<div class="list-empty">${UI.listEmpty}</div>`;
+}
+
+function selectChip(name){
+  if (name === LIVE_CHIP) showLive();
+  else if (CHIP_FILTER[name]) showList(name);
+}
+
 /* ── events ────────────────────────────────────────────────── */
 
 function bind(){
@@ -939,9 +1241,19 @@ function bind(){
   });
 
   $('chips').addEventListener('click', e => {
-    if (!e.target.classList.contains('chip')) return;
-    [...$('chips').children].forEach(c => c.classList.toggle('is-active', c === e.target));
+    const c = e.target.closest('.chip');       // the count span is inside the button
+    if (c) selectChip(c.dataset.chip);
   });
+
+  $('listRows').addEventListener('click', e => {
+    const row = e.target.closest('.mkt-row');
+    if (!row) return;
+    const m = [liveEntry()].concat(MARKETS).find(x => x.id === row.dataset.id);
+    if (m) openMarket(m);
+  });
+
+  /* back to the list you came from — chip still holds it */
+  $('backBtn').addEventListener('click', () => showList(chip));
 
   $('ranges').addEventListener('click', e => {
     if (!e.target.classList.contains('range')) return;
@@ -956,6 +1268,7 @@ function bind(){
 
 /* ── boot ──────────────────────────────────────────────────── */
 
+setView('market');
 renderChrome();
 renderMarket();
 renderOrderBook();
