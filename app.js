@@ -241,6 +241,25 @@ async function drift(to){
   }
 }
 
+/* The payoff moment: one row per position — side, stake, and the win or
+   loss it settled to. Winners net stake × (100 − price) / price; losers
+   forfeit the stake. Same arithmetic as the leaderboard deltas. */
+function renderSettlement(positions, yes){
+  $('payLabel').textContent = UI.settlementHead;
+  $('payRows').innerHTML = positions.map(p => {
+    const won = (p.side === 'yes') === yes;
+    const d = won ? Math.round(p.size * (100 - p.price) / p.price) : -p.size;
+    const sideLabel = p.side === 'yes' ? UI.yes : UI.no;
+    return `<div class="pay-row">
+       <span class="av">${p.who[0]}</span>
+       <span class="pay-who">${p.who}</span>
+       <span class="pay-pos mono"><span class="feed-side ${p.side}">${sideLabel}</span> ${p.size} ${UI.stakeAt} ${p.price}¢</span>
+       <span class="pay-delta mono ${d >= 0 ? 'up' : 'down'}">${d >= 0 ? '+' : '−'}$${Math.abs(d)}</span>
+     </div>`;
+  }).join('');
+  reveal($('pay'));
+}
+
 /* Settlement: the newest form square becomes a hit and the boards restate.
    The rows animate to their new positions, but note that with DATA.md's
    figures nobody actually changes rank — only Max's own numbers move, so
@@ -249,6 +268,7 @@ function settle(){
   renderForm(MARKET.form.slice(0, -1).concat(1), true);
   flipBoard('ftRows', DEMO.settled.followThrough, 'rate');
   flipBoard('shRows', DEMO.settled.sharpest, 'record');
+  renderSettlement(ACTIVITY, true);        // the scripted market resolves YES
   setCaption(DEMO.settledCaption, false);
 }
 
@@ -276,6 +296,7 @@ function flipBoard(box, rows, stat){
 function resetPhase4(){
   hideNow($('mc'));
   hideNow($('res'));
+  hideNow($('pay'));
   hideNow($('counter'));
   hideNow($('commit'));
   hideNow($('evi'));
@@ -785,6 +806,7 @@ function settleLive(yes){
   flipBoard('ftRows', adjust(FOLLOW_THROUGH), 'rate');
   flipBoard('shRows', adjust(SHARPEST), 'record');
   renderForm(MARKET.form.slice(1).concat(yes ? 1 : 0), true);
+  renderSettlement(LIVE.positions, yes);
   setCaption(yes ? UI.settledYesCaption : UI.settledNoCaption, false);
 }
 

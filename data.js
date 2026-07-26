@@ -209,6 +209,8 @@ const UI = {
   noEvidenceText: "No submission before resolution. The commitment was not evidenced. Resolved NO.",
   settledYesCaption: "Settled · Yes holders paid",
   settledNoCaption: "Settled · No holders paid",
+  settlementHead: "SETTLEMENT",
+  stakeAt: "@",
   finishesVerb: "finishes",
   resolvesPrefix: "RESOLVES",
   sessionRunning: "Session running",
