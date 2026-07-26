@@ -128,12 +128,47 @@
       </div>
     </div>
 
+    <!-- 10. leaderboards -->
+    <div class="card board">
+      <div class="sect-head mono" id="ftHead"></div>
+      <div class="board-rows" id="ftRows"></div>
+    </div>
+
+    <div class="card board">
+      <div class="sect-head mono" id="shHead"></div>
+      <div class="board-rows" id="shRows"></div>
+    </div>
+
   </aside>
 
-  <!-- ── ACTIVITY FEED (positions land here) ────────────────── -->
-  <section class="card feed">
-    <div class="sect-head mono" id="feedHead"></div>
-    <div class="feed-rows" id="feedRows"></div>
+  <!-- ── 8. TABBED SECTION ──────────────────────────────────── -->
+  <section class="card depth">
+    <div class="depth-tabs" id="depthTabs" role="tablist"></div>
+
+    <div class="depth-panels">
+      <div class="panel" id="panel-0" role="tabpanel">
+        <div class="ob">
+          <div class="ob-col" id="obBids"></div>
+          <div class="ob-col" id="obAsks"></div>
+        </div>
+      </div>
+
+      <!-- positions land here during the demo sequence -->
+      <div class="panel" id="panel-1" role="tabpanel">
+        <div class="feed-rows" id="feedRows"></div>
+      </div>
+
+      <div class="panel" id="panel-2" role="tabpanel">
+        <div class="hold">
+          <div class="hold-col" id="holdYes"></div>
+          <div class="hold-col" id="holdNo"></div>
+        </div>
+      </div>
+
+      <div class="panel" id="panel-3" role="tabpanel">
+        <div class="comments" id="comments"></div>
+      </div>
+    </div>
   </section>
 
 </main>

@@ -231,7 +231,8 @@ input{
   display: grid;
   gap: 16px;
 }
-.feed{ grid-area: feed; }
+/* overflow-hidden so the depth bars stay inside the card's bottom radius */
+.depth{ grid-area: feed; overflow: hidden; }
 
 .sect-head{
   font-size: 11px;
@@ -618,12 +619,151 @@ input{
   text-align: center;
 }
 
-/* ── ACTIVITY FEED ─────────────────────────────────────────── */
+/* ── 8. TABBED SECTION ─────────────────────────────────────── */
 
-.feed .sect-head{
-  padding: 14px 16px;
+.depth-tabs{
+  display: flex;
+  gap: 2px;
+  padding: 0 8px;
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.depth-tabs::-webkit-scrollbar{ display: none; }
+
+.depth-tab{
+  flex: none;
+  padding: 10px 14px;
+  font-size: 12px;
+  color: var(--text-2);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  white-space: nowrap;
+  transition: color 140ms linear;
+}
+.depth-tab:hover{ color: var(--text); }
+.depth-tab.is-active{ color: var(--text); border-bottom-color: var(--text); }
+
+.panel{ display: none; }
+.panel.is-open{ display: block; }
+
+/* order book */
+.ob{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+.ob-col + .ob-col{ border-left: 1px solid var(--border); }
+
+.ob-head, .ob-row{
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  align-items: center;
+  padding: 8px 16px;
+}
+.ob-head{
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  color: var(--text-3);
   border-bottom: 1px solid var(--border);
 }
+.ob-head .side-label{ letter-spacing: 0.14em; }
+.ob-head.bids .side-label{ color: var(--yes); }
+.ob-head.asks .side-label{ color: var(--no); }
+
+.ob-row{
+  position: relative;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+  font-size: 12px;
+  font-weight: 500;
+}
+/* the depth bar is what makes it read as a real book */
+.ob-bar{
+  position: absolute;
+  left: 0;
+  top: 1px;
+  bottom: 1px;
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  pointer-events: none;
+}
+.ob-row.bid .ob-bar{ background: var(--yes-bg); }
+.ob-row.ask .ob-bar{ background: var(--no-bg); }
+
+.ob-price{ position: relative; }
+.ob-row.bid .ob-price{ color: var(--yes); }
+.ob-row.ask .ob-price{ color: var(--no); }
+.ob-size{ position: relative; text-align: right; }
+.ob-total{ position: relative; text-align: right; }
+.ob-row .ob-size{ color: var(--text-2); }
+.ob-row .ob-total{ color: var(--text-3); }
+
+/* top holders */
+.hold{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+.hold-col + .hold-col{ border-left: 1px solid var(--border); }
+.hold-head{
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.hold-head.yes{ color: var(--yes); }
+.hold-head.no{ color: var(--no); }
+.hold-row{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  transition: background 140ms linear;
+}
+.hold-row:hover{ background: var(--surface-2); }
+.hold-name{ font-size: 13px; font-weight: 500; }
+.hold-size{
+  margin-left: auto;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-2);
+}
+
+/* comments */
+.comments{ padding: 4px 0 8px; }
+.cmt{
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  gap: 10px;
+  padding: 9px 16px;
+}
+.cmt-head{
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.cmt-who{ font-size: 13px; font-weight: 500; }
+.cmt-ago{
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  color: var(--text-3);
+}
+.cmt-body{
+  margin-top: 2px;
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+/* ── ACTIVITY (tab 2 — positions land here) ────────────────── */
+
 .feed-rows{ padding: 4px 0 6px; }
 
 .feed-row{
@@ -677,6 +817,48 @@ input{
   color: var(--text-3);
 }
 
+/* ── 10. LEADERBOARDS ──────────────────────────────────────── */
+
+.board .sect-head{
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.board-rows{ padding: 4px 0 6px; }
+
+.board-row{
+  display: grid;
+  grid-template-columns: 18px 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  font-size: 13px;
+  transition: background 140ms linear;
+}
+.board-row:hover{ background: var(--surface-2); }
+.board-rank{
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-3);
+}
+.board-name{ font-weight: 500; }
+.board-stat, .board-pnl{
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+  font-size: 12.5px;
+  font-weight: 500;
+}
+.board-stat{ color: var(--text-2); }
+.board-pnl{ min-width: 52px; text-align: right; }
+.board-pnl.up{ color: var(--yes); }
+.board-pnl.down{ color: var(--no); }
+
+.board-row.is-self{ background: var(--chalk-bg); }
+.board-row.is-self:hover{ background: #f0c14b1c; }
+.board-row.is-self .board-name{ color: var(--chalk); }
+
 /* positions landing during the demo */
 .landing{ animation: land 320ms var(--ease) both; }
 @keyframes land{
@@ -710,6 +892,12 @@ input{
   .chart-plot{ height: 140px; }
   .book{ margin: 0 16px 16px; }
   .question{ font-size: 17px; }
+
+  /* dense rows need the horizontal room back at this width */
+  .depth-tab{ padding: 10px 11px; }
+  .ob-head, .ob-row{ padding: 8px 12px; font-size: 11.5px; }
+  .hold-head, .hold-row, .cmt, .feed-row, .board-row{ padding-left: 12px; padding-right: 12px; }
+  .board .sect-head, .depth-tabs{ padding-left: 12px; padding-right: 12px; }
 }
 
 /* ── MOTION ────────────────────────────────────────────────── */

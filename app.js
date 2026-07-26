@@ -111,7 +111,6 @@ function renderChrome(){
   $('runBtn').textContent = UI.run;
   $('resetBtn').textContent = UI.reset;
   $('bookLabel').textContent = UI.bookLabel;
-  $('feedHead').textContent = UI.activityHead;
   $('amountLabel').textContent = UI.amountLabel;
   $('yesName').textContent = UI.yes;
   $('noName').textContent = UI.no;
@@ -124,6 +123,96 @@ function renderChrome(){
 
   $('quick').innerHTML = UI.quickAdd.map(q =>
     `<button type="button" data-q="${q}">${q}</button>`).join('');
+
+  $('depthTabs').innerHTML = UI.depthTabs.map((t, i) =>
+    `<button type="button" class="depth-tab" role="tab" data-tab="${i}"
+       aria-controls="panel-${i}" aria-selected="false">${t}</button>`).join('');
+
+  $('ftHead').textContent = UI.followThroughHead;
+  $('shHead').textContent = UI.sharpestHead;
+}
+
+/* ── 8. tabbed section ─────────────────────────────────────── */
+
+const TAB_BOOK = 0, TAB_ACTIVITY = 1;
+
+function openTab(i){
+  [...$('depthTabs').children].forEach((t, n) => {
+    t.classList.toggle('is-active', n === i);
+    t.setAttribute('aria-selected', String(n === i));
+  });
+  UI.depthTabs.forEach((_, n) => $('panel-' + n).classList.toggle('is-open', n === i));
+}
+
+function renderOrderBook(){
+  // widest bar is scaled to the deepest level on either side
+  const peak = Math.max(...ORDER_BOOK.bids.concat(ORDER_BOOK.asks).map(r => r.size));
+
+  const col = (rows, kind, head) =>
+    `<div class="ob-head ${kind}s">
+       <span class="side-label">${head}</span>
+       <span class="ob-size">${UI.colSize}</span>
+       <span class="ob-total">${UI.colTotal}</span>
+     </div>` +
+    rows.map(r =>
+      `<div class="ob-row ${kind}">
+         <span class="ob-bar" style="width:${(r.size / peak * 100).toFixed(1)}%"></span>
+         <span class="ob-price">${r.price}¢</span>
+         <span class="ob-size">${r.size}</span>
+         <span class="ob-total">${r.total}</span>
+       </div>`).join('');
+
+  $('obBids').innerHTML = col(ORDER_BOOK.bids, 'bid', UI.bidsHead);
+  $('obAsks').innerHTML = col(ORDER_BOOK.asks, 'ask', UI.asksHead);
+}
+
+function renderHolders(){
+  const col = (rows, kind, head) =>
+    `<div class="hold-head ${kind}">${head}</div>` +
+    rows.map(h =>
+      `<div class="hold-row">
+         <span class="av">${h.who[0]}</span>
+         <span class="hold-name">${h.who}</span>
+         <span class="hold-size">${h.size}</span>
+       </div>`).join('');
+
+  $('holdYes').innerHTML = col(HOLDERS.yes, 'yes', UI.yesHolders);
+  $('holdNo').innerHTML = col(HOLDERS.no, 'no', UI.noHolders);
+}
+
+function renderComments(){
+  $('comments').innerHTML = COMMENTS.map(c =>
+    `<div class="cmt">
+       <span class="av">${c.who[0]}</span>
+       <div>
+         <div class="cmt-head">
+           <span class="cmt-who">${c.who}</span>
+           <span class="cmt-ago">${c.ago}</span>
+         </div>
+         <div class="cmt-body">${c.text}</div>
+       </div>
+     </div>`).join('');
+}
+
+/* ── 10. leaderboards ──────────────────────────────────────── */
+
+function pnl(n){
+  return `<span class="board-pnl ${n >= 0 ? 'up' : 'down'}">${n >= 0 ? '+' : '-'}$${Math.abs(n)}</span>`;
+}
+
+function renderBoard(box, rows, stat){
+  $(box).innerHTML = rows.map((r, i) =>
+    `<div class="board-row${r.self ? ' is-self' : ''}">
+       <span class="board-rank">${i + 1}</span>
+       <span class="board-name">${r.name}</span>
+       <span class="board-stat">${r[stat]}</span>
+       ${pnl(r.pnl)}
+     </div>`).join('');
+}
+
+function renderBoards(){
+  renderBoard('ftRows', FOLLOW_THROUGH, 'rate');
+  renderBoard('shRows', SHARPEST, 'record');
 }
 
 function renderMarket(){
@@ -231,6 +320,7 @@ function renderTraded(){
   setCaption(DEMO.atNumber, true);
   $('bookBody').textContent = DEMO.afterAll;
   renderFeed(ACTIVITY);
+  openTab(TAB_BOOK);
 }
 
 /* t = 0.0s of the sequence — and what RESET returns to. */
@@ -243,6 +333,10 @@ function renderOpening(){
   $('bookBody').textContent = MARKET.openingComment;
   // The subject's own opening position — the market is never empty.
   renderFeed(ACTIVITY.filter(a => a.who === MARKET.subject));
+  /* Activity, not the book: the ladder is static mock depth quoted around 31,
+     which would contradict the 64 opening line if it were on screen here.
+     §8's "Order Book open by default" governs page load — see renderTraded. */
+  openTab(TAB_ACTIVITY);
 }
 
 /* ── sequence plumbing ─────────────────────────────────────── */
@@ -387,11 +481,20 @@ function bind(){
     if (!e.target.classList.contains('range')) return;
     [...$('ranges').children].forEach(r => r.classList.toggle('is-active', r === e.target));
   });
+
+  $('depthTabs').addEventListener('click', e => {
+    const i = e.target.dataset.tab;
+    if (i !== undefined) openTab(Number(i));
+  });
 }
 
 /* ── boot ──────────────────────────────────────────────────── */
 
 renderChrome();
 renderMarket();
+renderOrderBook();
+renderHolders();
+renderComments();
+renderBoards();
 renderTraded();
 bind();

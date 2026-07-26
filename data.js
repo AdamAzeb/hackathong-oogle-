@@ -141,8 +141,18 @@ const UI = {
   quickAdd: ["+$1", "+$20", "+$100", "Max"],
   buyPrefix: "Buy",
   payoutPrefix: "To win",
-  activityHead: "ACTIVITY",
   boughtVerb: "bought",
+
+  depthTabs: ["Order Book", "Activity", "Top Holders", "Comments"],
+  bidsHead: "BIDS",
+  asksHead: "ASKS",
+  colSize: "SIZE",
+  colTotal: "TOTAL",
+  yesHolders: "YES HOLDERS",
+  noHolders: "NO HOLDERS",
+  followThroughHead: "FOLLOW-THROUGH",
+  sharpestHead: "SHARPEST",
+
   hitGlyph: "✓",
   missGlyph: "✗"
 };
