@@ -1135,6 +1135,9 @@ function openMarket(m){
                ' ' + UI.settledAtPrefix + ' ' + m.price + '¢', false);
     setResolution({ resolution: m.verdict, confidence: m.confidence, text: m.resolutionText });
     reveal($('res'));
+    /* a settled market you're reading is settled the same way the demo's is —
+       every position paid out, same arithmetic */
+    renderSettlement(m.positions, m.verdict === 'YES');
     openTab(TAB_ACTIVITY);          // a settled market's ladder is history
   } else {
     setCaption(UI.openCaption, false);
