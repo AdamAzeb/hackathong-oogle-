@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BACKED</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- ── 1. TOP NAV ───────────────────────────────────────────── -->
+<header class="nav">
+  <div class="nav-in">
+    <a class="brand" href="#" id="brand"></a>
+
+    <label class="search">
+      <svg class="search-ico" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+        <circle cx="6.75" cy="6.75" r="4.25" fill="none" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M10 10l3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <input id="search" type="text" autocomplete="off" tabindex="0">
+    </label>
+
+    <div class="nav-right">
+      <span class="balance mono" id="balance"></span>
+      <span class="avatar-sq mono" id="navAvatar"></span>
+    </div>
+  </div>
+</header>
+
+<!-- ── 2. CATEGORY CHIPS ────────────────────────────────────── -->
+<nav class="chipbar" aria-label="Market categories">
+  <div class="chipbar-in" id="chips"></div>
+</nav>
+
+<main class="layout">
+
+  <!-- ── MARKET CARD ────────────────────────────────────────── -->
+  <section class="card market">
+
+    <!-- 3. header -->
+    <div class="mkt-head">
+      <div class="thumb mono" id="thumb"></div>
+
+      <div class="mkt-id">
+        <h1 class="question" id="question"></h1>
+        <div class="meta mono" id="meta"></div>
+        <div class="form" id="form"></div>
+      </div>
+
+      <div class="mkt-actions">
+        <button class="btn-run mono" id="runBtn" type="button"></button>
+        <button class="btn-reset mono" id="resetBtn" type="button"></button>
+      </div>
+    </div>
+
+    <!-- 4. price block -->
+    <div class="price-block">
+      <div class="price-row">
+        <div class="price mono" id="price">
+          <span id="priceNum">0</span><span class="price-pct">%</span>
+        </div>
+        <div class="delta mono" id="delta"></div>
+      </div>
+      <div class="caption" id="caption"></div>
+    </div>
+
+    <!-- 5. chart -->
+    <div class="chart">
+      <div class="chart-top">
+        <div class="ranges mono" id="ranges"></div>
+      </div>
+      <div class="chart-plot" id="plot">
+        <svg class="chart-svg" viewBox="0 0 640 130" preserveAspectRatio="none" aria-hidden="true">
+          <defs>
+            <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0"   stop-color="currentColor" stop-opacity="0.16"/>
+              <stop offset="1"   stop-color="currentColor" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <line class="grid" x1="0" y1="32.5"  x2="640" y2="32.5"/>
+          <line class="grid" x1="0" y1="97.5" x2="640" y2="97.5"/>
+          <path class="area" id="area" d=""/>
+          <polyline class="line" id="line" points="" vector-effect="non-scaling-stroke"/>
+        </svg>
+        <span class="chart-dot" id="dot"></span>
+        <span class="chart-tag mono" id="tag"></span>
+      </div>
+    </div>
+
+    <!-- 7. the book -->
+    <div class="book" id="book">
+      <div class="book-label mono" id="bookLabel"></div>
+      <p class="book-body" id="bookBody"></p>
+    </div>
+
+  </section>
+
+  <!-- ── SIDEBAR ────────────────────────────────────────────── -->
+  <aside class="side">
+
+    <!-- 6. trade panel -->
+    <div class="card trade" id="trade">
+      <div class="trade-tabs mono" id="tradeTabs"></div>
+
+      <div class="trade-body">
+        <div class="outcomes">
+          <button class="outcome is-yes" id="pickYes" type="button" aria-pressed="true">
+            <span class="outcome-name" id="yesName"></span>
+            <span class="outcome-price mono" id="yesPrice"></span>
+          </button>
+          <button class="outcome is-no" id="pickNo" type="button" aria-pressed="false">
+            <span class="outcome-name" id="noName"></span>
+            <span class="outcome-price mono" id="noPrice"></span>
+          </button>
+        </div>
+
+        <div class="amount-label mono" id="amountLabel"></div>
+        <div class="amount">
+          <span class="amount-cur mono">$</span>
+          <input class="amount-in mono" id="amount" type="text" inputmode="numeric" value="20">
+        </div>
+
+        <div class="quick mono" id="quick"></div>
+
+        <button class="action" id="action" type="button"></button>
+        <div class="payout mono" id="payout"></div>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- ── ACTIVITY FEED (positions land here) ────────────────── -->
+  <section class="card feed">
+    <div class="sect-head mono" id="feedHead"></div>
+    <div class="feed-rows" id="feedRows"></div>
+  </section>
+
+</main>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
