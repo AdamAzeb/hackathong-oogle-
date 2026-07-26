@@ -49,6 +49,8 @@
       </div>
 
       <div class="mkt-actions">
+        <button class="btn-run mono" id="stageBtn" type="button" hidden></button>
+        <button class="btn-reset mono" id="newBtn" type="button"></button>
         <button class="btn-run mono" id="runBtn" type="button"></button>
         <button class="btn-reset mono" id="resetBtn" type="button"></button>
       </div>
@@ -139,6 +141,9 @@
           </button>
         </div>
 
+        <div class="amount-label mono" id="bettorLabel"></div>
+        <select class="bettor-sel mono" id="bettor"></select>
+
         <div class="amount-label mono" id="amountLabel"></div>
         <div class="amount">
           <span class="amount-cur mono">$</span>
@@ -196,6 +201,28 @@
   </section>
 
 </main>
+
+<!-- live mode: state the commitment, the book reads your form -->
+<div class="counter" id="commit" hidden>
+  <div class="counter-card">
+    <div class="counter-label mono" id="cLabel"></div>
+    <label class="commit-field">
+      <span class="commit-name mono" id="cTitleLabel"></span>
+      <input class="commit-in" id="cTitle" type="text" autocomplete="off">
+    </label>
+    <div class="commit-pair">
+      <label class="commit-field">
+        <span class="commit-name mono" id="cMinLabel"></span>
+        <input class="commit-in mono" id="cMin" type="text" inputmode="numeric" value="30">
+      </label>
+      <label class="commit-field">
+        <span class="commit-name mono" id="cHourLabel"></span>
+        <input class="commit-in mono" id="cHour" type="text" inputmode="numeric" value="10">
+      </label>
+    </div>
+    <button class="counter-accept mono" id="cGo" type="button"></button>
+  </div>
+</div>
 
 <!-- counter-offer: the book refuses the doomed commitment. Gemma speaking → chalk. -->
 <div class="counter" id="counter" hidden>

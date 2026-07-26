@@ -88,15 +88,17 @@ const BackedAPI = (() => {
 
     /* → { resolution:"YES"|"NO", confidence, text }
        imageB64: base64 (no data: prefix) of the evidence photo, or null
-       to resolve on evidenceText alone. */
-    resolve(imageB64, evidenceText){
+       to resolve on evidenceText alone. `extra` overrides the scripted
+       market's commitment/topic/minutes for live-mode markets. */
+    resolve(imageB64, evidenceText, extra){
       return post('/resolve', {
         market_id: MARKET.id,
         commitment: MARKET.question,
         topic: 'thermodynamics',
         minutes: 30,
         image_b64: imageB64 || undefined,
-        evidence_text: evidenceText || undefined
+        evidence_text: evidenceText || undefined,
+        ...(extra || {})
       }, {
         resolution: DEMO.resolution.verdict.includes('YES') ? 'YES' : 'NO',
         confidence: DEMO.resolution.confidence,

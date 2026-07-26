@@ -544,6 +544,48 @@ input{
 }
 .counter-accept:hover{ background: #f0c14b1f; border-color: #f0c14b55; }
 
+/* ── COMMIT FORM (live mode — new listing) ─────────────────── */
+
+.commit-field{ display: block; margin-top: 12px; }
+.commit-name{
+  display: block;
+  margin-bottom: 6px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-2);
+}
+.commit-in{
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+}
+.commit-in:focus{ outline: none; border-color: var(--border-lit); }
+.commit-pair{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.bettor-sel{
+  width: 100%;
+  margin-bottom: 12px;
+  padding: 9px 12px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  appearance: none;
+}
+.bettor-sel:focus{ outline: none; border-color: var(--border-lit); }
+
 /* ── EVIDENCE BAR (live resolution upload) ─────────────────── */
 
 .evi{

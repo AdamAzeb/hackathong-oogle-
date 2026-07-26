@@ -147,6 +147,16 @@ function renderChrome(){
   $('eviLabel').textContent = UI.evidenceLabel;
   $('eviBtn').textContent = UI.uploadEvidence;
   $('eviSkip').textContent = UI.skipEvidence;
+
+  $('newBtn').textContent = UI.newMarket;
+  $('cLabel').textContent = UI.commitLabel;
+  $('cTitleLabel').textContent = UI.commitAssignment;
+  $('cTitle').placeholder = UI.commitAssignmentPh;
+  $('cMinLabel').textContent = UI.commitMinutes;
+  $('cHourLabel').textContent = UI.commitHour;
+  $('cGo').textContent = UI.getLine;
+  $('bettorLabel').textContent = UI.bettorLabel;
+  $('bettor').innerHTML = UI.bettors.map(b => `<option value="${b}">${b}</option>`).join('');
 }
 
 /* ── live engine beats (BackedAPI, falls back to data.js mocks) ─ */
@@ -155,10 +165,12 @@ function commitmentLine(prefix, c){
   return `${prefix} · ${c.topic} · ${c.minutes} ${UI.minSuffix} · ${c.hour}:00`;
 }
 
-/* The refusal modal. Resolves when Accept is clicked; RESET aborts it. */
-function showCounter(co){
+/* The refusal modal. Resolves when Accept is clicked; RESET aborts it.
+   `asked` is the commitment being refused — DEMO.doomed for the scripted
+   demo, the typed one in live mode. */
+function showCounter(co, asked = DEMO.doomed){
   $('coReason').textContent = co.reason;
-  $('coAsked').textContent = commitmentLine(UI.askedLabel, DEMO.doomed);
+  $('coAsked').textContent = commitmentLine(UI.askedLabel, asked);
   $('coRevised').textContent = commitmentLine(UI.counterOfferLabel, co.revised);
   reveal($('counter'));
   return step((entry, done) => {
@@ -170,6 +182,7 @@ function showCounter(co){
 function awaitEvidence(){
   $('eviFile').value = '';
   $('eviLabel').textContent = UI.evidenceLabel;
+  $('eviSkip').textContent = UI.skipEvidence;   // live mode relabels it
   reveal($('evi'));
   return step((entry, done) => {
     $('eviBtn').onclick = () => $('eviFile').click();
@@ -260,6 +273,7 @@ function resetPhase4(){
   hideNow($('mc'));
   hideNow($('res'));
   hideNow($('counter'));
+  hideNow($('commit'));
   hideNow($('evi'));
   $('resStamp').classList.remove('is-no');
   renderForm(MARKET.form, false);
@@ -300,18 +314,18 @@ function renderOrderBook(){
   $('obAsks').innerHTML = col(ORDER_BOOK.asks, 'ask', UI.asksHead);
 }
 
-function renderHolders(){
+function renderHolders(h = HOLDERS){
   const col = (rows, kind, head) =>
     `<div class="hold-head ${kind}">${head}</div>` +
-    rows.map(h =>
+    rows.map(x =>
       `<div class="hold-row">
-         <span class="av">${h.who[0]}</span>
-         <span class="hold-name">${h.who}</span>
-         <span class="hold-size">${h.size}</span>
+         <span class="av">${x.who[0]}</span>
+         <span class="hold-name">${x.who}</span>
+         <span class="hold-size">${x.size}</span>
        </div>`).join('');
 
-  $('holdYes').innerHTML = col(HOLDERS.yes, 'yes', UI.yesHolders);
-  $('holdNo').innerHTML = col(HOLDERS.no, 'no', UI.noHolders);
+  $('holdYes').innerHTML = col(h.yes, 'yes', UI.yesHolders);
+  $('holdNo').innerHTML = col(h.no, 'no', UI.noHolders);
 }
 
 function renderComments(){
@@ -552,6 +566,215 @@ function countTo(to, dur){
   });
 }
 
+/* ── LIVE MODE — the full loop on the presenter's real input ──
+   NEW → type the assignment → Gemma prices (or refuses) it →
+   publish (the subject's mandatory Yes lands) → bets move the
+   price → session with drift + live margin call → submission
+   portal → Gemma judges the upload → the right side gets paid.
+   The scripted ▶ RUN sequence is untouched as the fallback. */
+
+let LIVE = null;   // { commitment:{title,minutes,hour}, positions:[], stage, done }
+
+function setStage(label){
+  const b = $('stageBtn');
+  b.hidden = !label;
+  if (label) b.textContent = label;
+}
+
+function liveQuestion(c){
+  return `${MARKET.subject} ${UI.finishesVerb} ${c.title}`;
+}
+
+function liveMeta(){
+  const c = LIVE.commitment;
+  const vol = LIVE.positions.reduce((s, p) => s + p.size, 0);
+  const n = new Set(LIVE.positions.map(p => p.who)).size;
+  const d = '<span class="dot"></span>';
+  $('meta').innerHTML = [
+    c.minutes + ' ' + UI.minSuffix,
+    UI.resolvesPrefix + ' ' + String(c.hour).padStart(2, '0') + ':00',
+    money(vol) + ' ' + UI.volSuffix,
+    n + ' ' + UI.holdersSuffix
+  ].join(d);
+}
+
+function liveHolders(){
+  const agg = s => {
+    const m = new Map();
+    LIVE.positions.filter(p => p.side === s)
+      .forEach(p => m.set(p.who, (m.get(p.who) || 0) + p.size));
+    return [...m].map(([who, size]) => ({ who, size })).sort((a, b) => b.size - a.size);
+  };
+  return { yes: agg('yes'), no: agg('no') };
+}
+
+function openCommit(){
+  clearTimeline();
+  $('runBtn').disabled = false;
+  $('cGo').disabled = false;
+  $('cGo').textContent = UI.getLine;
+  reveal($('commit'));
+}
+
+async function priceCommitment(){
+  const title = $('cTitle').value.trim();
+  const minutes = Math.max(5, Number($('cMin').value) || 30);
+  const hour = String(Number($('cHour').value) || 10).padStart(2, '0');
+  if (!title) return;
+
+  clearTimeline();
+  const id = runId;
+  $('cGo').disabled = true;
+  $('cGo').textContent = UI.scanning;
+
+  let asked = { topic: title, minutes, hour };
+  let co = await BackedAPI.openingLine({ topic: title, minutes, start_hour: hour });
+  if (id !== runId) return;
+  conceal($('commit'));
+
+  if (co.action === 'counter_offer'){
+    try { await showCounter(co, asked); }
+    catch (e){ if (e === ABORT) return; throw e; }
+    asked = { topic: co.revised.topic, minutes: Number(co.revised.minutes),
+              hour: String(co.revised.hour).padStart(2, '0') };
+    co = await BackedAPI.openingLine({ topic: asked.topic, minutes: asked.minutes, start_hour: asked.hour });
+    if (id !== runId) return;
+  }
+
+  LIVE = { commitment: { title: asked.topic, minutes: asked.minutes, hour: asked.hour },
+           positions: [], stage: 'priced', done: false };
+  setState('idle');
+  resetPhase4();
+  $('question').textContent = liveQuestion(LIVE.commitment);
+  series = SERIES_BASE.map((_, i) => co.probability + (i % 2 ? 0.7 : -0.7));
+  setPrice(co.probability);
+  drawChart(series);
+  setBook(co.rationale);
+  setCaption(UI.pricedCaption, false);
+  renderFeed([]);
+  renderHolders({ yes: [], no: [] });
+  liveMeta();
+  openTab(TAB_ACTIVITY);
+  setStage(UI.publish);
+}
+
+function publishLive(){
+  LIVE.stage = 'open';
+  setState('trading');
+  setCaption(UI.openCaption, false);
+  setStage(UI.startSession);
+  placeBet(MARKET.subject, 'yes', UI.mandatoryStake);   // the subject always backs themselves
+}
+
+async function placeBet(who, betSide, stake){
+  if (!LIVE || LIVE.stage !== 'open' || !(stake > 0)) return;
+  const p = Math.round(price);
+  const exec = betSide === 'yes' ? p : 100 - p;
+  LIVE.positions.push({ who, side: betSide, size: stake, price: exec });
+  pushFeed({ who, side: betSide, size: stake, price: exec, ago: 'now' });
+  liveMeta();
+  renderHolders(liveHolders());
+  const delta = Math.max(1, Math.round(stake / 20)) * (betSide === 'yes' ? 1 : -1);
+  try { await countTo(Math.max(3, Math.min(97, p + delta)), 500); }
+  catch (e){ if (e !== ABORT) throw e; }
+}
+
+async function startSessionLive(){
+  LIVE.stage = 'session';
+  setStage(null);
+  clearTimeline();
+  const id = runId;
+  setState('session');
+
+  /* the submission portal stays open for the whole session */
+  $('eviFile').value = '';
+  $('eviLabel').textContent = UI.evidenceLabel;
+  $('eviSkip').textContent = UI.noSubmission;
+  reveal($('evi'));
+  $('eviBtn').onclick = () => $('eviFile').click();
+  $('eviFile').onchange = e => { const f = e.target.files[0]; if (f) submitLive(f); };
+  $('eviSkip').onclick = () =>
+    resolveLive({ resolution: 'NO', confidence: 100, text: UI.noEvidenceText });
+
+  try {
+    let left = LIVE.commitment.minutes;              // compressed: 1 min ≈ 700ms
+    const target = Math.max(5, Math.round(price) - 7);
+    const mcPromise = BackedAPI.marginCall({
+      price_now: target, minutes_left: Math.max(1, Math.round(left * 0.6)) });
+    let called = false;
+
+    while (left > 0){
+      setCaption(`${UI.sessionRunning} · ${left} ${UI.sessionLeftSuffix}`, false);
+      await sleep(700);
+      left--;
+      const idlePhase = left < LIVE.commitment.minutes - 3;
+      if (idlePhase && Math.round(price) > target){
+        setPrice(Math.round(price) - 1);             // idle drift, in public
+        series.push(price);
+        drawChart(series);
+      }
+      if (idlePhase && !called && Math.round(price) <= target){
+        called = true;
+        setState('margin');
+        const mc = await mcPromise;
+        if (id !== runId) return;
+        $('mcText').textContent = mc.text;
+        reveal($('mc'));
+        await sleep(3000);
+        conceal($('mc'));
+        setState('session');
+      }
+    }
+    setCaption(UI.sessionOver, false);
+  } catch (e){
+    if (e !== ABORT) throw e;
+  }
+}
+
+async function submitLive(file){
+  if (!LIVE || LIVE.done) return;
+  const id = runId;
+  $('eviLabel').textContent = UI.resolvingLabel;
+  const b64 = await fileToB64(file);
+  const r = await BackedAPI.resolve(b64, null, {
+    market_id: 'live_' + Date.now(),
+    commitment: liveQuestion(LIVE.commitment),
+    topic: LIVE.commitment.title,
+    minutes: LIVE.commitment.minutes
+  });
+  if (id !== runId || !LIVE || LIVE.done) return;
+  resolveLive(r);
+}
+
+function resolveLive(r){
+  if (!LIVE || LIVE.done) return;
+  LIVE.done = true;
+  clearTimeline();                                   // stops the session timer
+  conceal($('evi'));
+  hideNow($('mc'));
+  setResolution(r);
+  setState('resolved');
+  reveal($('res'));
+  settleLive(r.resolution === 'YES');
+}
+
+/* Payouts are arithmetic, never the model: winners collect stake × (100 − price) / price,
+   losers forfeit their stake. */
+function settleLive(yes){
+  setState('settled');
+  const deltas = new Map();
+  LIVE.positions.forEach(p => {
+    const won = (p.side === 'yes') === yes;
+    const d = won ? Math.round(p.size * (100 - p.price) / p.price) : -p.size;
+    deltas.set(p.who, (deltas.get(p.who) || 0) + d);
+  });
+  const adjust = rows => rows.map(r => ({ ...r, pnl: r.pnl + (deltas.get(r.name) || 0) }));
+  flipBoard('ftRows', adjust(FOLLOW_THROUGH), 'rate');
+  flipBoard('shRows', adjust(SHARPEST), 'record');
+  renderForm(MARKET.form.slice(1).concat(yes ? 1 : 0), true);
+  setCaption(yes ? UI.settledYesCaption : UI.settledNoCaption, false);
+}
+
 /* ── §9 the demo sequence ──────────────────────────────────── */
 
 async function runDemo(){
@@ -640,8 +863,25 @@ function bind(){
 
   $('resetBtn').addEventListener('click', () => {
     clearTimeline();
+    LIVE = null;
+    setStage(null);
     $('runBtn').disabled = false;
+    renderMarket();          // restore the scripted market's question + meta
     renderOpening();
+  });
+
+  $('newBtn').addEventListener('click', openCommit);
+  $('cGo').addEventListener('click', priceCommitment);
+  $('cTitle').addEventListener('keydown', e => { if (e.key === 'Enter') priceCommitment(); });
+
+  $('stageBtn').addEventListener('click', () => {
+    if (!LIVE) return;
+    if (LIVE.stage === 'priced') publishLive();
+    else if (LIVE.stage === 'open') startSessionLive();
+  });
+
+  $('action').addEventListener('click', () => {
+    if (LIVE && LIVE.stage === 'open') placeBet($('bettor').value, side, amount);
   });
 
   $('pickYes').addEventListener('click', () => { side = 'yes'; renderPayout(); });
