@@ -159,7 +159,9 @@ To refuse and counter-offer — REQUIRED when the attempt log shows this
 same topic at this same hour at this same size attempted three or more
 times with zero or one completion:
 {"action":"counter_offer","reason":"<one line citing the record>",
- "revised":{"topic":"<topic>","minutes":<int>,"hour":"<HH>"}}
+ "revised":{"topic":"<topic>","minutes":<int>,"hour":"<HH>"},
+ "asked_probability":<int 0-100 — the punitive line you would quote if
+ the learner insists on opening the requested market anyway>}
 
 When you counter, name the specific slot and size their record
 supports, and cite the record (e.g. "you're 7-from-9 in that slot").
@@ -185,7 +187,7 @@ def open_market(user_id, topic, minutes, start_hour):
                        "start_hour": start_hour, "size": size_bucket(minutes)},
         "learner": learner,
     })
-    key = _hash("open_market", prompt)
+    key = _hash("open_market", "v2", prompt)   # v2: counter includes asked_probability
     fallback = {"action": "open_market", "probability": 64,
                 "rationale": "Opening you at 64. You've cleared thirty-minute blocks at ten in the morning seven times from nine — that's the only reason this line isn't worse."}
 

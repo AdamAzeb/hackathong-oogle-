@@ -529,20 +529,32 @@ input{
   text-decoration: line-through;
 }
 .counter-rev{ color: var(--text); }
-.counter-accept{
-  width: 100%;
+.counter-actions{
+  display: flex;
+  gap: 10px;
   margin-top: 14px;
+}
+.counter-actions button{
+  flex: 1;
   padding: 11px;
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.12em;
-  color: var(--chalk);
-  background: var(--chalk-bg);
-  border: 1px solid var(--chalk-line);
   border-radius: var(--r-md);
   transition: background 140ms linear, border-color 140ms linear;
 }
+.counter-accept{
+  color: var(--chalk);
+  background: var(--chalk-bg);
+  border: 1px solid var(--chalk-line);
+}
 .counter-accept:hover{ background: #f0c14b1f; border-color: #f0c14b55; }
+.counter-insist{
+  color: var(--text-2);
+  background: none;
+  border: 1px solid var(--border);
+}
+.counter-insist:hover{ color: var(--text); border-color: var(--border-lit); }
 
 /* ── COMMIT FORM (live mode — new listing) ─────────────────── */
 

@@ -165,16 +165,20 @@ function commitmentLine(prefix, c){
   return `${prefix} · ${c.topic} · ${c.minutes} ${UI.minSuffix} · ${c.hour}:00`;
 }
 
-/* The refusal modal. Resolves when Accept is clicked; RESET aborts it.
-   `asked` is the commitment being refused — DEMO.doomed for the scripted
-   demo, the typed one in live mode. */
-function showCounter(co, asked = DEMO.doomed){
+/* The refusal modal — advisory, not binding. Resolves with 'accept' or
+   'insist'; RESET aborts it. `asked` is the commitment being refused —
+   DEMO.doomed for the scripted demo, the typed one in live mode. The
+   insist path only exists in live mode; the scripted run stays on rails. */
+function showCounter(co, asked = DEMO.doomed, allowInsist = false){
   $('coReason').textContent = co.reason;
   $('coAsked').textContent = commitmentLine(UI.askedLabel, asked);
   $('coRevised').textContent = commitmentLine(UI.counterOfferLabel, co.revised);
+  $('coInsist').hidden = !allowInsist;
+  $('coInsist').textContent = UI.openAnyway;
   reveal($('counter'));
   return step((entry, done) => {
-    $('coAccept').onclick = () => { conceal($('counter')); done(); };
+    $('coAccept').onclick = () => { conceal($('counter')); done('accept'); };
+    $('coInsist').onclick = () => { conceal($('counter')); done('insist'); };
   });
 }
 
@@ -633,12 +637,21 @@ async function priceCommitment(){
   conceal($('commit'));
 
   if (co.action === 'counter_offer'){
-    try { await showCounter(co, asked); }
+    let choice;
+    try { choice = await showCounter(co, asked, true); }
     catch (e){ if (e === ABORT) return; throw e; }
-    asked = { topic: co.revised.topic, minutes: Number(co.revised.minutes),
-              hour: String(co.revised.hour).padStart(2, '0') };
-    co = await BackedAPI.openingLine({ topic: asked.topic, minutes: asked.minutes, start_hour: asked.hour });
-    if (id !== runId) return;
+    if (choice === 'insist'){
+      /* The user defines the market. The book opens it — at the punitive
+         line their record earns. The refusal becomes the rationale. */
+      co = { action: 'open_market',
+             probability: co.asked_probability || DEMO.doomed.askedProbability,
+             rationale: co.reason };
+    } else {
+      asked = { topic: co.revised.topic, minutes: Number(co.revised.minutes),
+                hour: String(co.revised.hour).padStart(2, '0') };
+      co = await BackedAPI.openingLine({ topic: asked.topic, minutes: asked.minutes, start_hour: asked.hour });
+      if (id !== runId) return;
+    }
   }
 
   LIVE = { commitment: { title: asked.topic, minutes: asked.minutes, hour: asked.hour },

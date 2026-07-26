@@ -47,7 +47,8 @@ const DEMO = {
   doomed: {
     topic: "thermodynamics", minutes: 90, hour: "16",
     reason: "You've failed this exact block four times at four in the afternoon. I'm not opening that market.",
-    revised: { topic: "thermodynamics", minutes: 30, hour: "10" }
+    revised: { topic: "thermodynamics", minutes: 30, hour: "10" },
+    askedProbability: 12          // the punitive line if the learner insists
   },
 
   positions: [
@@ -220,6 +221,7 @@ const UI = {
   askedLabel: "ASKED",
   counterOfferLabel: "COUNTER",
   acceptCounter: "ACCEPT THE COUNTER",
+  openAnyway: "OPEN IT ANYWAY",
   minSuffix: "MIN",
   evidenceLabel: "EVIDENCE",
   uploadEvidence: "UPLOAD PHOTO",
