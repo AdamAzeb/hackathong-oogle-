@@ -56,6 +56,13 @@
 
     <!-- 4. price block -->
     <div class="price-block">
+      <!-- margin call sits in the price block's empty right half: no layout
+           shift when it arrives, which matters mid-sequence -->
+      <div class="mc" id="mc" hidden>
+        <div class="mc-label mono" id="mcLabel"></div>
+        <div class="mc-text" id="mcText"></div>
+      </div>
+
       <div class="price-row">
         <div class="price mono" id="price">
           <span id="priceNum">0</span><span class="price-pct">%</span>
@@ -92,6 +99,15 @@
     <div class="book" id="book">
       <div class="book-label mono" id="bookLabel"></div>
       <p class="book-body" id="bookBody"></p>
+    </div>
+
+    <!-- resolution verdict, appears below the book on settlement -->
+    <div class="res" id="res" hidden>
+      <div class="res-top">
+        <span class="res-stamp mono" id="resStamp"></span>
+        <span class="res-conf mono" id="resConf"></span>
+      </div>
+      <p class="res-text" id="resText"></p>
     </div>
 
   </section>

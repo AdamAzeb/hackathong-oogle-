@@ -320,6 +320,12 @@ input{
 }
 .form-sq.hit{ background: var(--yes-bg); color: var(--yes); }
 .form-sq.miss{ background: var(--no-bg); color: var(--no); }
+/* the one animation the form line is allowed: settlement */
+.form-sq.flip{ animation: flip 320ms var(--ease) both; }
+@keyframes flip{
+  from{ transform: rotateY(-90deg); }
+  to{ transform: none; }
+}
 
 .mkt-actions{
   margin-left: auto;
@@ -352,7 +358,7 @@ input{
 
 /* ── 4. PRICE BLOCK ────────────────────────────────────────── */
 
-.price-block{ padding: 0 24px 4px; }
+.price-block{ position: relative; padding: 0 24px 4px; }
 
 .price-row{
   display: flex;
@@ -390,6 +396,78 @@ input{
 .caption.is-hero{
   font-size: 13px;
   color: var(--text);
+}
+
+/* ── MARGIN CALL ───────────────────────────────────────────── */
+
+.mc{
+  position: absolute;
+  right: 24px;
+  top: 0;
+  /* wide enough to wrap to two lines, so it cannot reach the chart's range
+     toggles sitting just below the price block */
+  width: 420px;
+  z-index: 2;
+  padding: 10px 12px;
+  background: var(--chalk-bg);
+  border: 1px solid var(--chalk-line);
+  border-radius: var(--r-lg);
+  opacity: 0;
+  transition: opacity 200ms linear;
+}
+.mc.is-on{ opacity: 1; }
+.mc-label{
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  color: var(--chalk);
+}
+.mc-text{
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #e9ddc0;
+}
+
+/* ── RESOLUTION ────────────────────────────────────────────── */
+
+.res{
+  margin: 0 20px 20px;
+  padding: 14px 16px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  opacity: 0;
+  transition: opacity 200ms linear;
+}
+.res.is-on{ opacity: 1; }
+
+.res-top{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.res-stamp{
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  border-radius: var(--r-sm);
+  background: var(--yes-bg);
+  border: 1px solid var(--yes-line);
+  color: var(--yes);
+}
+.res-conf{
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  color: var(--text-2);
+}
+.res-text{
+  margin: 9px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-2);
 }
 
 /* ── 5. CHART ──────────────────────────────────────────────── */
@@ -855,6 +933,9 @@ input{
 .board-pnl.up{ color: var(--yes); }
 .board-pnl.down{ color: var(--no); }
 
+/* settlement reorder */
+.board-row.settling{ transition: transform 300ms var(--ease); }
+
 .board-row.is-self{ background: var(--chalk-bg); }
 .board-row.is-self:hover{ background: #f0c14b1c; }
 .board-row.is-self .board-name{ color: var(--chalk); }
@@ -888,6 +969,13 @@ input{
   .mkt-actions{ width: 100%; margin-left: 0; }
   .price-block{ padding: 0 16px 4px; }
   .price{ font-size: 44px; }
+  /* no empty right half to sit in at this width — drop it into the flow */
+  .mc{
+    position: static;
+    width: auto;
+    margin: 12px 0 0;
+  }
+  .res{ margin: 0 16px 16px; }
   .chart{ padding: 4px 12px 12px; }
   .chart-plot{ height: 140px; }
   .book{ margin: 0 16px 16px; }

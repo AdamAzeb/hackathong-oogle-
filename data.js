@@ -61,6 +61,13 @@ const DEMO = {
     text: "Nine minutes idle, you've drifted to 24, and Sara's adding to her No. One problem gets you back over thirty."
   },
 
+  sessionCaption: "Session running · 22 min left",
+
+  // §9 asks for 1 point every 900ms AND a margin call at ~9s. From 31 to 24
+  // that rate takes 6.3s, putting the call at ~12.8s; the gaps after it are
+  // kept as specified. Set this to 360 to match the table's absolute times.
+  driftMs: 900,
+
   recoversTo: 38,
 
   // HOOK: resolve_market → Gemma, thinking:high, multimodal
@@ -70,7 +77,28 @@ const DEMO = {
     text: "Photograph shows six worked problems on entropy change with unit-consistent working, consistent with roughly thirty minutes of effort. Not graded for correctness. No holders may challenge for five minutes."
   },
 
-  settledCaption: "Settled · No holders paid at 31¢"
+  settledCaption: "Settled · No holders paid at 31¢",
+
+  // HOOK: GET /standings after settlement — replaces FOLLOW_THROUGH / SHARPEST
+  // Derived from the positions above at a cost basis of size × price: Max's
+  // Yes 50 @ 64¢ cost $32 and returns $50 (+18); the No holders lose their
+  // stakes (Sara 150 @ 58¢ = 87, Tom 80 @ 49¢ = 39, Priya 120 @ 36¢ = 43).
+  // Only Max's own completion rate moves — the others' commitments are
+  // unaffected by this market, so no row changes rank. See note in app.js.
+  settled: {
+    followThrough: [
+      { name:"Sara",  rate:"81%", pnl:+240 },
+      { name:"Priya", rate:"74%", pnl:+180 },
+      { name:"Max",   rate:"55%", pnl:-32, self:true },
+      { name:"Tom",   rate:"46%", pnl:-95 }
+    ],
+    sharpest: [
+      { name:"Sara",  record:"12-5", pnl:+323 },
+      { name:"Tom",   record:"9-7",  pnl:+81 },
+      { name:"Priya", record:"7-9",  pnl:-83 },
+      { name:"Max",   record:"4-9",  pnl:-192, self:true }
+    ]
+  }
 };
 
 const ORDER_BOOK = {
@@ -152,6 +180,7 @@ const UI = {
   noHolders: "NO HOLDERS",
   followThroughHead: "FOLLOW-THROUGH",
   sharpestHead: "SHARPEST",
+  confidenceLabel: "CONFIDENCE",
 
   hitGlyph: "✓",
   missGlyph: "✗"

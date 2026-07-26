@@ -42,6 +42,11 @@ const EASE = bez(0.22, 1, 0.36, 1);
 
 /* One string drives every visual state. Do not add booleans. */
 let state = 'idle';          // idle | trading | session | margin | resolved | settled
+
+function setState(s){
+  state = s;
+  document.documentElement.dataset.state = s;   // one hook for CSS and debugging
+}
 let price = 31;              // current market probability, 0–100
 let series = [];             // chart history, oldest first
 let side = 'yes';            // trade panel selection
@@ -130,6 +135,81 @@ function renderChrome(){
 
   $('ftHead').textContent = UI.followThroughHead;
   $('shHead').textContent = UI.sharpestHead;
+
+  $('mcLabel').textContent = DEMO.marginCall.label;
+  $('mcText').textContent = DEMO.marginCall.text;
+  $('resStamp').textContent = DEMO.resolution.verdict;
+  $('resConf').textContent = UI.confidenceLabel + ' ' + DEMO.resolution.confidence + '%';
+  $('resText').textContent = DEMO.resolution.text;
+}
+
+/* ── 11. session / margin call / resolution / settlement ───── */
+
+function reveal(el){
+  clearTimeout(el._t);
+  el.hidden = false;
+  requestAnimationFrame(() => el.classList.add('is-on'));
+}
+
+function conceal(el){
+  clearTimeout(el._t);
+  el.classList.remove('is-on');
+  el._t = setTimeout(() => { el.hidden = true; }, REDUCED ? 0 : 200);
+}
+
+function hideNow(el){
+  clearTimeout(el._t);
+  el.classList.remove('is-on');
+  el.hidden = true;
+}
+
+/* Drift: one point per DEMO.driftMs until the margin call triggers. */
+async function drift(to){
+  while (Math.round(price) > to){
+    await sleep(DEMO.driftMs);
+    setPrice(Math.round(price) - 1);
+    series.push(price);
+    drawChart(series);
+  }
+}
+
+/* Settlement: the newest form square becomes a hit and the boards restate.
+   The rows animate to their new positions, but note that with DATA.md's
+   figures nobody actually changes rank — only Max's own numbers move, so
+   what reads on screen is the figures restating, not rows swapping. */
+function settle(){
+  renderForm(MARKET.form.slice(0, -1).concat(1), true);
+  flipBoard('ftRows', DEMO.settled.followThrough, 'rate');
+  flipBoard('shRows', DEMO.settled.sharpest, 'record');
+  setCaption(DEMO.settledCaption, false);
+}
+
+function flipBoard(box, rows, stat){
+  const was = new Map();
+  [...$(box).children].forEach(r => was.set(r.dataset.name, r.getBoundingClientRect().top));
+
+  renderBoard(box, rows, stat);
+  if (REDUCED) return;
+
+  [...$(box).children].forEach(r => {
+    const before = was.get(r.dataset.name);
+    if (before === undefined) return;
+    const dy = before - r.getBoundingClientRect().top;
+    if (!dy) return;
+    r.style.transform = `translateY(${dy}px)`;
+    requestAnimationFrame(() => {
+      r.classList.add('settling');
+      r.style.transform = '';
+    });
+  });
+}
+
+/* Everything Phase 4 adds to the page, cleared so a re-run starts clean. */
+function resetPhase4(){
+  hideNow($('mc'));
+  hideNow($('res'));
+  renderForm(MARKET.form, false);
+  renderBoards();
 }
 
 /* ── 8. tabbed section ─────────────────────────────────────── */
@@ -202,7 +282,7 @@ function pnl(n){
 
 function renderBoard(box, rows, stat){
   $(box).innerHTML = rows.map((r, i) =>
-    `<div class="board-row${r.self ? ' is-self' : ''}">
+    `<div class="board-row${r.self ? ' is-self' : ''}" data-name="${r.name}">
        <span class="board-rank">${i + 1}</span>
        <span class="board-name">${r.name}</span>
        <span class="board-stat">${r[stat]}</span>
@@ -227,11 +307,19 @@ function renderMarket(){
     MARKET.holders + ' ' + UI.holdersSuffix
   ].join(d);
 
+  renderForm(MARKET.form, false);
+}
+
+/* flipNewest animates only the rightmost square — the one animation the form
+   line is allowed, and only on settlement */
+function renderForm(form, flipNewest){
+  const last = form.length - 1;
   $('form').innerHTML =
     `<span class="form-label">${UI.formLabel}</span>` +
-    MARKET.form.map(f => f
-      ? `<span class="form-sq hit">${UI.hitGlyph}</span>`
-      : `<span class="form-sq miss">${UI.missGlyph}</span>`).join('');
+    form.map((f, i) => {
+      const cls = (f ? 'hit' : 'miss') + (flipNewest && i === last ? ' flip' : '');
+      return `<span class="form-sq ${cls}">${f ? UI.hitGlyph : UI.missGlyph}</span>`;
+    }).join('');
 }
 
 /* ── price / trade panel ───────────────────────────────────── */
@@ -308,7 +396,8 @@ function pushFeed(p){
 
 /* Page load: the market has already traded down to 31. */
 function renderTraded(){
-  state = 'idle';
+  setState('idle');
+  resetPhase4();
   series = SERIES_BASE.slice();
   let from = MARKET.openingPrice;
   DEMO.positions.forEach(p => {
@@ -325,7 +414,8 @@ function renderTraded(){
 
 /* t = 0.0s of the sequence — and what RESET returns to. */
 function renderOpening(){
-  state = 'idle';
+  setState('idle');
+  resetPhase4();
   series = SERIES_BASE.slice();
   setPrice(MARKET.openingPrice);
   drawChart(series);
@@ -422,7 +512,7 @@ async function runDemo(){
     setCaption(DEMO.open, false);          // 0.7s
     await sleep(800);
 
-    state = 'trading';
+    setState('trading');
     const ago = ['7m', '4m', '2m'];
     for (let i = 0; i < DEMO.positions.length; i++){
       const p = DEMO.positions[i];
@@ -434,7 +524,27 @@ async function runDemo(){
 
     setCaption(DEMO.atNumber, true);       // 4.4s — hold here
     setBook(DEMO.afterAll);
-    state = 'idle';
+
+    await sleep(2100);                     // 6.5s — the session starts
+    setState('session');
+    setCaption(DEMO.sessionCaption, false);
+    await drift(DEMO.marginCall.triggersAt);
+
+    setState('margin');                    // price hit 24, drift stops
+    reveal($('mc'));
+    await sleep(3000);
+
+    setState('session');                   // work happened
+    conceal($('mc'));
+    await countTo(DEMO.recoversTo, 1200);
+    await sleep(800);
+
+    setState('resolved');
+    reveal($('res'));
+    await sleep(1000);
+
+    setState('settled');
+    settle();
   } catch (e){
     if (e !== ABORT) throw e;
   } finally {
